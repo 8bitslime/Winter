@@ -14,7 +14,8 @@ static const char *keywords[] = {
 };
 
 static const char *operators[] = {
-	"++", "--", "-=", "+=", "||", "&&", "=+-*/%|&"
+	"++", "--", "-=", "+=", "==", "!=", "<=", ">=", "||", "&&", //all multicharacter operators
+	"=<>+-*/%|&!" //single character operators in last string
 };
 
 static const char *symbols = ",;()[]{}";
@@ -46,10 +47,10 @@ static size_t isKeyword(const char *source, token_type_t *type) {
 	for (size_t i = 0; i < lengthOf(keywords); i++) {
 		size_t length = strlen(keywords[i]);
 		if (strncmp(source, keywords[i], length) == 0) {
-			if (isAlphaUnder(source[length])) {
+			if (isAlNumUnder(source[length])) {
 				continue;
 			}
-			*type = TOKEN_FOR + i;
+			*type = TK_FOR + i;
 			return length;
 		}
 	}
@@ -57,9 +58,10 @@ static size_t isKeyword(const char *source, token_type_t *type) {
 }
 
 //Returns non-zero if the immediate token is a symbol
-static size_t isSymbol(const char *source) {
+static size_t isSymbol(const char *source, token_type_t *type) {
 	for (int i = 0; i < strlen(symbols); i++) {
 		if (*source == symbols[i]) {
+			*type = i + TK_COMMA;
 			return 1;
 		}
 	}
@@ -81,7 +83,7 @@ static size_t isIdentifier(const char *source) {
 static size_t isNumber(const char *source, token_type_t *type) {
 	size_t i = 0;
 	if (isdigit(source[0])) {
-		*type = TOKEN_INT;
+		*type = TK_INT;
 		if (source[0] == '0' && (source[1] == 'x' || source[1] == 'X') && isdigit(source[2])) {
 			i+=3;
 			while(isHex(source[i])) i++;
@@ -89,12 +91,32 @@ static size_t isNumber(const char *source, token_type_t *type) {
 			while(isdigit(source[i])) i++;
 			if (source[i] == '.') {
 				i++;
-				*type = TOKEN_FLOAT;
+				*type = TK_FLOAT;
 				while(isdigit(source[i])) i++;
 			}
 		}
 	}
 	return i;
+}
+
+//Returns non-zero if the immedaite token is a string
+static size_t isString(const char *source) {
+	if (*source == '"') {
+		size_t i = 1;
+		
+		while(source[i] && source[i] != '"') {
+			if (source[i] == '\\') {
+				i += 2;
+			} else {
+				i++;
+			}
+		}
+		
+		//Add 1 to i if source[i] is not a null terminator
+		//TODO: throw lexer error if no closing quote found
+		return i + !!source[i];
+	}
+	return 0;
 }
 
 static size_t nextToken(const char *source, char **endPtr) {
@@ -112,15 +134,19 @@ static size_t nextToken(const char *source, char **endPtr) {
 		if (isAlphaUnder(*source)) {
 			if ((ret = isKeyword(source, &type))) goto end;
 			if ((ret = isIdentifier(source))) {
-				type = TOKEN_IDENT;
+				type = TK_IDENT;
 				goto end;
 			}
 		} else {
 			if ((ret = isNumber(source, &type))) goto end;
-			if ((ret = isSymbol(source))) goto end;
+			if ((ret = isSymbol(source, &type))) goto end;
+			if ((ret = isString(source))) {
+				type = TK_STRING;
+				goto end;
+			}
 		}
 		
-		type = TOKEN_UNKNOWN;
+		type = TK_UNKNOWN;
 		ret = 1;
 	}
 	
@@ -132,13 +158,13 @@ static size_t nextToken(const char *source, char **endPtr) {
 		//construct token
 		char string[128] = {0};
 		memcpy(string, source, ret);
-		printf("%s\t%i\n", string, type);
+		printf("%s\t%i\t%i\n", string, type, ret);
 	}
 	return ret;
 }
 
 int main(int argc, char **argv) {
-	char *string = "_123 = 123; x = hell0*0x34";
+	char *string = "[{for(;;)return 1;}]";
 	while(nextToken(string, &string));
 	return 0;
 }
