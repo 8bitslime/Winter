@@ -68,15 +68,37 @@ static size_t isSymbol(const char *source, token_type_t *type) {
 	return 0;
 }
 
+//Returns non-zero if the immediate token is an operator
+//Multicharacter operators take priority in tokenization
+static size_t isOperator(const char *source, token_type_t *type) {
+	//Check multicharcter operator
+	for (size_t i = 0; i < lengthOf(operators) - 1; i++) {
+		//2 character operator hard coded coded at the moment
+		if (strncmp(source, operators[i], 2) == 0) {
+			*type = i + TK_INC;
+			return 2;
+		}
+	}
+	
+	//Check if it is a single character operator
+	const char *single_operators = operators[lengthOf(operators) - 1];
+	for (int i = 0; i < strlen(single_operators); i++) {
+		if (*source == single_operators[i]) {
+			*type = i + TK_ASSIGN;
+			return 1;
+		}
+	}
+	return 0;
+}
+
 //Returns non-zero if the immediate token is an identifier
 static size_t isIdentifier(const char *source) {
 	if (isAlphaUnder(source[0])) {
 		size_t i = 1;
 		while(isAlNumUnder(source[i])) i++;
 		return i;
-	} else {
-		return 0;
 	}
+	return 0;
 }
 
 //Returns non-zero if the immedaite token is a number
@@ -140,6 +162,7 @@ static size_t nextToken(const char *source, char **endPtr) {
 		} else {
 			if ((ret = isNumber(source, &type))) goto end;
 			if ((ret = isSymbol(source, &type))) goto end;
+			if ((ret = isOperator(source, &type))) goto end;
 			if ((ret = isString(source))) {
 				type = TK_STRING;
 				goto end;
@@ -164,7 +187,7 @@ static size_t nextToken(const char *source, char **endPtr) {
 }
 
 int main(int argc, char **argv) {
-	char *string = "[{for(;;)return 1;}]";
+	char *string = "for (int i = 0; i < 20; i++);";
 	while(nextToken(string, &string));
 	return 0;
 }
