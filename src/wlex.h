@@ -28,7 +28,7 @@ typedef enum token_type_t {
 	TK_IDENT,
 	
 	//Literals
-	TK_INT, TK_FLOAT, TK_STRING
+	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR
 } token_type_t;
 
 typedef union token_info_t {

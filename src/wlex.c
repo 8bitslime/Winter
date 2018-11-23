@@ -141,6 +141,19 @@ static size_t isString(const char *source) {
 	return 0;
 }
 
+//Returns non-zero if the immediate token is a character literal
+static size_t isCharacter(const char *source) {
+	//TODO: more escape sequence (ie hex)
+	if (source[0] == '\'') {
+		if (source[1] == '\\' && source[3] == '\'') {
+			return 4;
+		} else if (source[2] == '\'' && source[1] != '\'') {
+			return 3;
+		}
+		return 0;
+	}
+}
+
 static size_t nextToken(const char *source, char **endPtr) {
 	size_t ret = 0;
 	token_type_t type;
@@ -167,6 +180,10 @@ static size_t nextToken(const char *source, char **endPtr) {
 				type = TK_STRING;
 				goto end;
 			}
+			if ((ret = isCharacter(source))) {
+				type = TK_CHAR;
+				goto end;
+			}
 		}
 		
 		type = TK_UNKNOWN;
@@ -187,7 +204,7 @@ static size_t nextToken(const char *source, char **endPtr) {
 }
 
 int main(int argc, char **argv) {
-	char *string = "for (int i = 0; i < 20; i++);";
+	char *string = "for (int i = '\\n'; i < 20; i++);";
 	while(nextToken(string, &string));
 	return 0;
 }
