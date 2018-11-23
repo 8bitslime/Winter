@@ -1,6 +1,16 @@
+/*
+** FILE: wlex.h
+** 
+** PURPOSE: Contains all functions necessary for splitting a string into tokens
+**          and categorizing them.
+**
+** Copyright (c) 2018 Zachary Wells, see LICENSE for more details
+*/
+
 #ifndef WINLEX_H
 #define WINLEX_H
 
+//All categorizations of tokens, order is specific to not change please :)
 typedef enum token_type_t {
 	//Unexpected symbol
 	TK_UNKNOWN = 0,
