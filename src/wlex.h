@@ -10,7 +10,9 @@
 #ifndef WINLEX_H
 #define WINLEX_H
 
-//All categorizations of tokens, order is specific to not change please :)
+#include "winter.h"
+
+//All categorizations of tokens, order is specific, do not change please :)
 typedef enum token_type_t {
 	//Unexpected symbol
 	TK_UNKNOWN = 0,
@@ -30,7 +32,7 @@ typedef enum token_type_t {
 	TK_MIN_EQ, TK_ADD_EQ, TK_EQ, TK_NEQ,
 	TK_LEQ, TK_GEQ,
 	TK_OR, TK_AND,
-	TK_ASSIGN, TK_LESS, TK_GREAT,
+	TK_DOT, TK_ASSIGN, TK_LESS, TK_GREAT,
 	TK_ADD, TK_SUB, TK_MUL, TK_DIV, TK_MOD,
 	TK_BITOR, TK_BITAND, TK_NOT,
 	

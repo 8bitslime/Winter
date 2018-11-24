@@ -24,7 +24,7 @@ static const char *keywords[] = {
 
 static const char *operators[] = {
 	"++", "--", "-=", "+=", "==", "!=", "<=", ">=", "||", "&&", //all multicharacter operators
-	"=<>+-*/%|&!" //single character operators in last string
+	".=<>+-*/%|&!" //single character operators in last string
 };
 
 static const char *symbols = ",;()[]{}";
@@ -93,7 +93,7 @@ static size_t isOperator(const char *source, token_type_t *type) {
 	const char *single_operators = operators[lengthOf(operators) - 1];
 	for (int i = 0; i < strlen(single_operators); i++) {
 		if (*source == single_operators[i]) {
-			*type = i + TK_ASSIGN;
+			*type = i + TK_DOT;
 			return 1;
 		}
 	}
@@ -205,6 +205,9 @@ static size_t nextToken(const char *source, char **endPtr) {
 	}
 	if (ret) {
 		//construct token
+		if (!type) {
+			printf("unexpected symbol!\n");
+		}
 		char string[128] = {0};
 		memcpy(string, source, ret);
 		printf("%s\t%i\t%i\n", string, type, ret);
@@ -213,7 +216,7 @@ static size_t nextToken(const char *source, char **endPtr) {
 }
 
 int main(int argc, char **argv) {
-	char *string = "for (int i = '\\n'; i < 20; i++);";
+	char *string = "for (int i = '\\n'; i._ex < 20; i++);";
 	while(nextToken(string, &string));
 	return 0;
 }
