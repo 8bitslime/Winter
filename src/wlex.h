@@ -44,8 +44,15 @@ typedef enum token_type_t {
 } token_type_t;
 
 typedef union token_info_t {
-	int integer;
-	
+	winter_int   integer;
+	winter_float floating;
+	char *string;
 } token_info_t;
+
+typedef struct token_t {
+	token_type_t type;
+	token_info_t info;
+	//TODO: debug info
+} token_t;
 
 #endif

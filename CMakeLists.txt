@@ -6,5 +6,9 @@ set(WINTER_SOURCES
 )
 include_directories(./include)
 
+if (NOT MSVC)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -pedantic")
+endif()
+
 add_executable(${PROJECT_NAME} ${WINTER_SOURCES})
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 11)

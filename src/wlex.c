@@ -11,6 +11,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 #define lengthOf(a) (sizeof(a) / sizeof(*(a)))
@@ -159,11 +160,11 @@ static size_t isCharacter(const char *source) {
 		} else if (source[2] == '\'' && source[1] != '\'') {
 			return 3;
 		}
-		return 0;
 	}
+	return 0;
 }
 
-static size_t nextToken(const char *source, char **endPtr) {
+static size_t nextToken(const char *source, char **endPtr, token_t *token) {
 	size_t ret = 0;
 	token_type_t type;
 	
@@ -200,23 +201,85 @@ static size_t nextToken(const char *source, char **endPtr) {
 	}
 	
 	end:
-	if (endPtr) {
-		*endPtr = (char*)(source + ret);
-	}
 	if (ret) {
-		//construct token
-		if (!type) {
-			printf("unexpected symbol!\n");
+		if (endPtr) {
+			*endPtr = (char*)(source + ret);
 		}
-		char string[128] = {0};
-		memcpy(string, source, ret);
-		printf("%s\t%i\t%i\n", string, type, ret);
+		
+		token->type = type;
+		switch (type) {
+			case TK_INT: {
+				token->info.integer = (winter_int)strtoll(source, NULL, 0);
+			} break;
+			
+			case TK_FLOAT: {
+				token->info.floating = (winter_float)strtod(source, NULL);
+			} break;
+			
+			case TK_IDENT:
+			case TK_STRING: {
+				//TODO: allow custom allocators
+				token->info.string = malloc(ret + 1);
+				//TODO: convert escape characters
+				memcpy(token->info.string, source, ret);
+				token->info.string[ret] = '\0';
+			} break;
+			
+			case TK_CHAR: {
+				//TODO: convert char to int
+			} break;
+			
+			default: break;
+		}
 	}
+	
 	return ret;
 }
 
+#if 1
+//useful for debug printing
+static const char *token_names[] = {
+	"TK_UNKNOWN",
+	"TK_FOR", "TK_DO", "TK_WHILE", "TK_BREAK",
+	"TK_IF", "TK_ELSE", "TK_RETURN",
+	"TK_COMMA", "TK_SEMICOLON",
+	"TK_LPAREN", "TK_RPAREN",
+	"TK_LBRACKET", "TK_RBRACKET",
+	"TK_LCURLY", "TK_RCURLY",
+	"TK_INC", "TK_DEC",
+	"TK_MIN_EQ", "TK_ADD_EQ", "TK_EQ", "TK_NEQ",
+	"TK_LEQ", "TK_GEQ",
+	"TK_OR", "TK_AND",
+	"TK_DOT", "TK_ASSIGN", "TK_LESS", "TK_GREAT",
+	"TK_ADD", "TK_SUB", "TK_MUL", "TK_DIV", "TK_MOD",
+	"TK_BITOR", "TK_BITAND", "TK_NOT",
+	"TK_IDENT",
+	"TK_INT", "TK_FLOAT", "TK_STRING", "TK_CHAR"
+};
+#endif
+
 int main(int argc, char **argv) {
-	char *string = "for (int i = '\\n'; i._ex < 20; i++);";
-	while(nextToken(string, &string));
+	token_t token;
+	char *string = "x = \x22hello world\x22; x[floor(3)] = 0";
+	
+	while(nextToken(string, &string, &token)) {
+		switch (token.type) {
+			case TK_IDENT:
+			case TK_STRING:
+				printf("%s\n", token.info.string);
+				free(token.info.string);
+				break;
+			case TK_INT:
+				printf("%lld\n", token.info.integer);
+				break;
+			case TK_FLOAT:
+				printf("%f\n", token.info.floating);
+				break;
+			default:
+				printf("%s\n", token_names[token.type]);
+				break;
+		}
+	}
+	
 	return 0;
 }
