@@ -157,7 +157,6 @@ static size_t isString(const char *source) {
 
 //Returns non-zero if the immediate token is a character literal
 static size_t isCharacter(const char *source) {
-	//TODO: more escape sequence (ie hex)
 	if (source[0] == '\'') {
 		if (source[1] == '\\') {
 			if (source[2] == 'x') {
@@ -178,6 +177,62 @@ static size_t isCharacter(const char *source) {
 			}
 		} else if (source[2] == '\'' && source[1] != '\'') {
 			return 3;
+		}
+	}
+	return 0;
+}
+
+//Returns the length of the escape sequence and sets character to the ascii value
+static size_t decodeEscape(const char *source, winter_int *character) {
+	if (source[0] == '\\') {
+		switch (source[1]) {
+			case 'a':
+				*character = '\a';
+				return 2;
+			case 'b':
+				*character = '\b';
+				return 2;
+			case 'f':
+				*character = '\f';
+				return 2;
+			case 'n':
+				*character = '\n';
+				return 2;
+			case 'r':
+				*character = '\r';
+				return 2;
+			case 't':
+				*character = '\t';
+				return 2;
+			case 'v':
+				*character = '\v';
+				return 2;
+			case 'e':
+				*character = '\e';
+				return 2;
+			case '\\':
+				*character = '\\';
+				return 2;
+			case '\'':
+				*character = '\'';
+				return 2;
+			case '"':
+				*character = '"';
+				return 2;
+			
+			case 'x': { //hex escape sequence
+				char *pointer;
+				*character = (winter_int)strtoll(source+2, &pointer, 16);
+				return source - pointer + 2;
+			}
+		}
+		if (isdigit(source[1])) {
+			char *pointer;
+			*character = (winter_int)strtoll(source+1, &pointer, 8);
+			return source - pointer + 1;
+		} else {
+			*character = source[1];
+			return 2;
 		}
 	}
 	return 0;
@@ -245,7 +300,11 @@ static size_t nextToken(const char *source, char **endPtr, token_t *token) {
 			} break;
 			
 			case TK_CHAR: {
-				//TODO: convert char to int
+				if (source[1] == '\\') {
+					decodeEscape(source + 1, &token->info.integer);
+				} else {
+					token->info.integer = (winter_int)source[1];
+				}
 			} break;
 			
 			default: break;
@@ -279,7 +338,7 @@ static const char *token_names[] = {
 
 int main(int argc, char **argv) {
 	token_t token;
-	char *string = "x = \a";
+	char *string = "x = '\\10'";
 	
 	while(nextToken(string, &string, &token)) {
 		switch (token.type) {
@@ -289,10 +348,13 @@ int main(int argc, char **argv) {
 				free(token.info.string);
 				break;
 			case TK_INT:
-				printf("TK_INT: %i\n", token.info.integer);
+				printf("TK_INT: %i\n", (int)token.info.integer);
 				break;
 			case TK_FLOAT:
 				printf("TK_FLOAT: %f\n", token.info.floating);
+				break;
+			case TK_CHAR:
+				printf("TK_CHAR: %i\n", (int)token.info.integer);
 				break;
 			default:
 				printf("%s\n", token_names[token.type]);
