@@ -24,8 +24,11 @@ static const char *keywords[] = {
 };
 
 static const char *operators[] = {
-	"++", "--", "-=", "+=", "==", "!=", "<=", ">=", "||", "&&", //all multicharacter operators
-	".=<>+-*/%|&!" //single character operators in last string
+	//all multicharacter operators
+	"++", "--", "-=", "+=", "==", "!=", "<=", ">=", "||", "&&",
+	
+	//single character operators in last string
+	".=<>+-*/%|&!"
 };
 
 static const char *symbols = ",;()[]{}";
@@ -144,9 +147,10 @@ static size_t isString(const char *source) {
 			}
 		}
 		
-		//Add 1 to i if source[i] is not a null terminator
-		//TODO: throw lexer error if no closing quote found
-		return i + !!source[i];
+		if (source[i] == '"') {
+			//Only return non-zero if closing quotation mark
+			return i + 1;
+		}
 	}
 	return 0;
 }
@@ -155,8 +159,23 @@ static size_t isString(const char *source) {
 static size_t isCharacter(const char *source) {
 	//TODO: more escape sequence (ie hex)
 	if (source[0] == '\'') {
-		if (source[1] == '\\' && source[3] == '\'') {
-			return 4;
+		if (source[1] == '\\') {
+			if (source[2] == 'x') {
+				//hex escape
+				size_t i = 3;
+				while (isHex(source[i])) i++;
+				if (source[i] == '\'') {
+					return i + 1;
+				}
+			} else if (isdigit(source[2])) {
+				size_t i = 3;
+				while (isdigit(source[i])) i++;
+				if (source[i] == '\'') {
+					return i + 1;
+				}
+			} else if (source[3] == '\'') {
+				return 4;
+			}
 		} else if (source[2] == '\'' && source[1] != '\'') {
 			return 3;
 		}
@@ -260,20 +279,20 @@ static const char *token_names[] = {
 
 int main(int argc, char **argv) {
 	token_t token;
-	char *string = "x = \x22hello world\x22; x[floor(3)] = 0";
+	char *string = "x = \a";
 	
 	while(nextToken(string, &string, &token)) {
 		switch (token.type) {
 			case TK_IDENT:
 			case TK_STRING:
-				printf("%s\n", token.info.string);
+				printf("%s: %s\n", token_names[token.type], token.info.string);
 				free(token.info.string);
 				break;
 			case TK_INT:
-				printf("%lld\n", token.info.integer);
+				printf("TK_INT: %i\n", token.info.integer);
 				break;
 			case TK_FLOAT:
-				printf("%f\n", token.info.floating);
+				printf("TK_FLOAT: %f\n", token.info.floating);
 				break;
 			default:
 				printf("%s\n", token_names[token.type]);
