@@ -210,25 +210,16 @@ static size_t decodeEscape(const char *source, winter_int *character) {
 			case 'e':
 				*character = '\e';
 				return 2;
-			case '\\':
-				*character = '\\';
-				return 2;
-			case '\'':
-				*character = '\'';
-				return 2;
-			case '"':
-				*character = '"';
-				return 2;
 			
 			case 'x': { //hex escape sequence
 				char *pointer;
-				*character = (winter_int)strtoll(source+2, &pointer, 16);
-				return source - pointer + 2;
+				*character = (char)strtoll(source+2, &pointer, 16);
+				return pointer - source;
 			}
 		}
-		if (isdigit(source[1])) {
+		if (isdigit(source[1])) { //octal escape sequence
 			char *pointer;
-			*character = (winter_int)strtoll(source+1, &pointer, 8);
+			*character = (char)strtoll(source+1, &pointer, 8);
 			return source - pointer + 1;
 		} else {
 			*character = source[1];
@@ -290,13 +281,30 @@ static size_t nextToken(const char *source, char **endPtr, token_t *token) {
 				token->info.floating = (winter_float)strtod(source, NULL);
 			} break;
 			
-			case TK_IDENT:
-			case TK_STRING: {
-				//TODO: allow custom allocators
+			case TK_IDENT: {
 				token->info.string = malloc(ret + 1);
-				//TODO: convert escape characters
 				memcpy(token->info.string, source, ret);
 				token->info.string[ret] = '\0';
+			} break;
+			
+			case TK_STRING: {
+				//TODO: allow custom allocators
+				token->info.string = malloc(ret);
+				source++;
+				
+				size_t i = 0;
+				while (*source != '"') {
+					if (*source == '\\') {
+						winter_int character;
+						source += decodeEscape(source, &character);
+						token->info.string[i++] = character;
+					} else {
+						token->info.string[i++] = *source;
+						source++;
+					}
+				}
+				
+				token->info.string[i+1] = '\0';
 			} break;
 			
 			case TK_CHAR: {
@@ -338,7 +346,7 @@ static const char *token_names[] = {
 
 int main(int argc, char **argv) {
 	token_t token;
-	char *string = "x = '\\10'";
+	char *string = "x = \"hello \\a world\"";
 	
 	while(nextToken(string, &string, &token)) {
 		switch (token.type) {
