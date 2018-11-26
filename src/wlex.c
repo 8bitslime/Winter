@@ -111,7 +111,7 @@ static size_t isIdentifier(const char *source) {
 	}
 	return 0;
 }
-s os off
+
 //Returns non-zero if the immedaite token is a number
 static size_t isNumber(const char *source, token_type_t *type) {
 	size_t i = 0;
