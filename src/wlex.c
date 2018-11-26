@@ -26,10 +26,9 @@ static const char *keywords[] = {
 static const char *operators[] = {
 	//all multicharacter operators
 	"++", "--", "-=", "+=", "==", "!=", "<=", ">=", "||", "&&",
-	
-	//single character operators in last string
-	".=<>+-*/%|&!"
-};
+};	
+
+static const char* single_operators = ".=<>+-*/%|&!";
 
 static const char *symbols = ",;()[]{}";
 
@@ -85,7 +84,7 @@ static size_t isSymbol(const char *source, token_type_t *type) {
 //Multicharacter operators take priority in tokenization
 static size_t isOperator(const char *source, token_type_t *type) {
 	//Check multicharcter operator
-	for (size_t i = 0; i < lengthOf(operators) - 1; i++) {
+	for (size_t i = 0; i < lengthOf(operators); i++) {
 		//2 character operator hard coded coded at the moment
 		if (strncmp(source, operators[i], 2) == 0) {
 			*type = i + TK_INC;
@@ -94,7 +93,6 @@ static size_t isOperator(const char *source, token_type_t *type) {
 	}
 	
 	//Check if it is a single character operator
-	const char *single_operators = operators[lengthOf(operators) - 1];
 	for (int i = 0; i < strlen(single_operators); i++) {
 		if (*source == single_operators[i]) {
 			*type = i + TK_DOT;
@@ -113,7 +111,7 @@ static size_t isIdentifier(const char *source) {
 	}
 	return 0;
 }
-
+s os off
 //Returns non-zero if the immedaite token is a number
 static size_t isNumber(const char *source, token_type_t *type) {
 	size_t i = 0;
