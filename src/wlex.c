@@ -181,7 +181,7 @@ static size_t isCharacter(const char *source) {
 }
 
 //Returns the length of the escape sequence and sets character to the ascii value
-static size_t decodeEscape(const char *source, winter_int *character) {
+static size_t decodeEscape(const char *source, winterInt_t *character) {
 	if (source[0] == '\\') {
 		switch (source[1]) {
 			case 'a':
@@ -227,7 +227,7 @@ static size_t decodeEscape(const char *source, winter_int *character) {
 	return 0;
 }
 
-static size_t nextToken(const char *source, char **endPtr, token_t *token) {
+size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
 	size_t ret = 0;
 	token_type_t type;
 	
@@ -272,11 +272,11 @@ static size_t nextToken(const char *source, char **endPtr, token_t *token) {
 		token->type = type;
 		switch (type) {
 			case TK_INT: {
-				token->info.integer = (winter_int)strtoll(source, NULL, 0);
+				token->info.integer = (winterInt_t)strtoll(source, NULL, 0);
 			} break;
 			
 			case TK_FLOAT: {
-				token->info.floating = (winter_float)strtod(source, NULL);
+				token->info.floating = (winterFloat_t)strtod(source, NULL);
 			} break;
 			
 			case TK_IDENT: {
@@ -293,7 +293,7 @@ static size_t nextToken(const char *source, char **endPtr, token_t *token) {
 				size_t i = 0;
 				while (*source != '"') {
 					if (*source == '\\') {
-						winter_int character;
+						winterInt_t character;
 						source += decodeEscape(source, &character);
 						token->info.string[i++] = character;
 					} else {
@@ -309,7 +309,7 @@ static size_t nextToken(const char *source, char **endPtr, token_t *token) {
 				if (source[1] == '\\') {
 					decodeEscape(source + 1, &token->info.integer);
 				} else {
-					token->info.integer = (winter_int)source[1];
+					token->info.integer = (winterInt_t)source[1];
 				}
 			} break;
 			
@@ -344,9 +344,9 @@ static const char *token_names[] = {
 
 int main(int argc, char **argv) {
 	token_t token;
-	char *string = "x = \"hello \\a world\"";
+	char *string = "x = \"hello\\a world\"";
 	
-	while(nextToken(string, &string, &token)) {
+	while(_winter_nextToken(string, &string, &token)) {
 		switch (token.type) {
 			case TK_IDENT:
 			case TK_STRING:

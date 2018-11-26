@@ -44,8 +44,8 @@ typedef enum token_type_t {
 } token_type_t;
 
 typedef union token_info_t {
-	winter_int   integer;
-	winter_float floating;
+	winterInt_t   integer;
+	winterFloat_t floating;
 	char *string;
 } token_info_t;
 
@@ -54,5 +54,7 @@ typedef struct token_t {
 	token_info_t info;
 	//TODO: debug info
 } token_t;
+
+size_t _winter_nextToken(const char *source, char **endPtr, token_t *token);
 
 #endif

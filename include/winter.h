@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 //TODO: rename this
-typedef int64_t winter_int;
-typedef double  winter_float;
+typedef int64_t winterInt_t;
+typedef double  winterFloat_t;
 
 #endif
