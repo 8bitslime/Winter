@@ -43,6 +43,8 @@ typedef enum token_type_t {
 	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR
 } token_type_t;
 
+#define isTKOperator(e) ((e) >= TK_INC && (e) <= TK_NOT)
+
 typedef union token_info_t {
 	winterInt_t   integer;
 	winterFloat_t floating;

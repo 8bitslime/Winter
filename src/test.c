@@ -1,5 +1,6 @@
 #include "winter.h"
 #include "wlex.h"
+#include "wparser.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -27,31 +28,37 @@ static const char *token_names[] = {
 int main(int argc, char **argv) {
 	char buffer[512] = "";
 	
+	printf("type and expression: ");
 	while (strncmp(buffer, "exit", 4) != 0) {
-		char *string = buffer;
-		token_t token;
-		while(_winter_nextToken(string, &string, &token)) {
-			switch (token.type) {
-				case TK_IDENT:
-				case TK_STRING:
-					printf("%s: %s\n", token_names[token.type], token.info.string);
-					free(token.info.string);
-					break;
-				case TK_INT:
-					printf("TK_INT: %i\n", (int)token.info.integer);
-					break;
-				case TK_FLOAT:
-					printf("TK_FLOAT: %f\n", token.info.floating);
-					break;
-				case TK_CHAR:
-					printf("TK_CHAR: %i\n", (int)token.info.integer);
-					break;
-				default:
-					printf("%s\n", token_names[token.type]);
-					break;
-			}
-		}
+		// char *string = buffer;
+		// token_t token;
+		// while(_winter_nextToken(string, &string, &token)) {
+		// 	switch (token.type) {
+		// 		case TK_IDENT:
+		// 		case TK_STRING:
+		// 			printf("%s: %s\n", token_names[token.type], token.info.string);
+		// 			free(token.info.string);
+		// 			break;
+		// 		case TK_INT:
+		// 			printf("TK_INT: %i\n", (int)token.info.integer);
+		// 			break;
+		// 		case TK_FLOAT:
+		// 			printf("TK_FLOAT: %f\n", token.info.floating);
+		// 			break;
+		// 		case TK_CHAR:
+		// 			printf("TK_CHAR: %i\n", (int)token.info.integer);
+		// 			break;
+		// 		default:
+		// 			printf("%s\n", token_names[token.type]);
+		// 			break;
+		// 	}
+		// }
 		fgets(buffer, 512, stdin);
+		
+		ast_node_t *tree = _winter_parseExpression(buffer, NULL);
+		tree = _winter_executeAST(tree);
+		printf("%i\n", (int)tree->info.integer);
+		free(tree);
 	}
 	
 	return 0;

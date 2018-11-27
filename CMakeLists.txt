@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(winter VERSION 0.1.0 LANGUAGES C)
 
+set(CMAKE_BUILD_TYPE DEBUG)
+
 set(WINTER_SOURCES
 	src/wlex.c
+	src/wparser.c
 	src/test.c
 )
 include_directories(./include)
