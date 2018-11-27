@@ -10,8 +10,11 @@
 
 #include <stdint.h>
 
-//TODO: rename this
+//Primitive types
 typedef int64_t winterInt_t;
 typedef double  winterFloat_t;
+
+//State of the interpreter
+typedef struct winterState winterState;
 
 #endif

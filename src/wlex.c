@@ -12,7 +12,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #define lengthOf(a) (sizeof(a) / sizeof(*(a)))
 #define isAlphaUnder(c) (isalpha(c) || (c) == '_')
@@ -27,10 +26,8 @@ static const char *operators[] = {
 	//all multicharacter operators
 	"++", "--", "-=", "+=", "==", "!=", "<=", ">=", "||", "&&",
 };	
-
 static const char* single_operators = ".=<>+-*/%|&!";
-
-static const char *symbols = ",;()[]{}";
+static const char *symbols = ",;:()[]{}";
 
 //Advances the source pointer forward past whitespaces
 static void skipWhitespaces(const char **source) {
@@ -205,8 +202,10 @@ static size_t decodeEscape(const char *source, winterInt_t *character) {
 			case 'v':
 				*character = '\v';
 				return 2;
+				
+			//Non-standard escape sequence, but usefull in Linux
 			case 'e':
-				*character = '\e';
+				*character = 0x1B;
 				return 2;
 			
 			case 'x': { //hex escape sequence
@@ -218,7 +217,7 @@ static size_t decodeEscape(const char *source, winterInt_t *character) {
 		if (isdigit(source[1])) { //octal escape sequence
 			char *pointer;
 			*character = (char)strtoll(source+1, &pointer, 8);
-			return source - pointer + 1;
+			return pointer - source;
 		} else {
 			*character = source[1];
 			return 2;
@@ -287,7 +286,7 @@ size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
 			
 			case TK_STRING: {
 				//TODO: allow custom allocators
-				token->info.string = malloc(ret);
+				token->info.string = malloc(ret - 1);
 				source++;
 				
 				size_t i = 0;
@@ -302,7 +301,7 @@ size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
 					}
 				}
 				
-				token->info.string[i+1] = '\0';
+				token->info.string[i] = '\0';
 			} break;
 			
 			case TK_CHAR: {
@@ -316,57 +315,5 @@ size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
 			default: break;
 		}
 	}
-	
 	return ret;
-}
-
-#if 1
-//useful for debug printing
-static const char *token_names[] = {
-	"TK_UNKNOWN",
-	"TK_FOR", "TK_DO", "TK_WHILE", "TK_BREAK",
-	"TK_IF", "TK_ELSE", "TK_RETURN",
-	"TK_COMMA", "TK_SEMICOLON",
-	"TK_LPAREN", "TK_RPAREN",
-	"TK_LBRACKET", "TK_RBRACKET",
-	"TK_LCURLY", "TK_RCURLY",
-	"TK_INC", "TK_DEC",
-	"TK_MIN_EQ", "TK_ADD_EQ", "TK_EQ", "TK_NEQ",
-	"TK_LEQ", "TK_GEQ",
-	"TK_OR", "TK_AND",
-	"TK_DOT", "TK_ASSIGN", "TK_LESS", "TK_GREAT",
-	"TK_ADD", "TK_SUB", "TK_MUL", "TK_DIV", "TK_MOD",
-	"TK_BITOR", "TK_BITAND", "TK_NOT",
-	"TK_IDENT",
-	"TK_INT", "TK_FLOAT", "TK_STRING", "TK_CHAR"
-};
-#endif
-
-int main(int argc, char **argv) {
-	token_t token;
-	char *string = "x = \"hello\\a world\"";
-	
-	while(_winter_nextToken(string, &string, &token)) {
-		switch (token.type) {
-			case TK_IDENT:
-			case TK_STRING:
-				printf("%s: %s\n", token_names[token.type], token.info.string);
-				free(token.info.string);
-				break;
-			case TK_INT:
-				printf("TK_INT: %i\n", (int)token.info.integer);
-				break;
-			case TK_FLOAT:
-				printf("TK_FLOAT: %f\n", token.info.floating);
-				break;
-			case TK_CHAR:
-				printf("TK_CHAR: %i\n", (int)token.info.integer);
-				break;
-			default:
-				printf("%s\n", token_names[token.type]);
-				break;
-		}
-	}
-	
-	return 0;
 }

@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(Winter VERSION 0.1.0 LANGUAGES C)
+project(winter VERSION 0.1.0 LANGUAGES C)
 
 set(WINTER_SOURCES
 	src/wlex.c
+	src/test.c
 )
 include_directories(./include)
 
