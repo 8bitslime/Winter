@@ -5,7 +5,7 @@ set(CMAKE_BUILD_TYPE DEBUG)
 
 set(WINTER_SOURCES
 	src/wlex.c
-	src/wparser.c
+	src/wtable.c
 	src/test.c
 )
 include_directories(./include)
