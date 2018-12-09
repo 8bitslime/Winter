@@ -260,11 +260,14 @@ size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
 		
 		type = TK_UNKNOWN;
 		ret = 1;
+	} else {
+		type = TK_EOF;
+		ret = 0;
 	}
 	
 	end:
-	if (ret) {
-		if (endPtr) {
+	// if (ret) {
+		if (ret && endPtr) {
 			*endPtr = (char*)(source + ret);
 		}
 		
@@ -314,6 +317,6 @@ size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
 			
 			default: break;
 		}
-	}
+	// }
 	return ret;
 }

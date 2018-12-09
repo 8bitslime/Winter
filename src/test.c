@@ -8,10 +8,17 @@
 #include <stdio.h>
 
 int main(int argc, char **argv) {
-	ast_node_t *ast = _winter_parseStatement("1 + 2 * 3");
-	ast = execute(ast);
+	char buffer[512];
 	
-	printf("1 + 2 * 3 = %i\n", (int)ast->value.integer);
+	while (strncmp(buffer, "exit", 4)) {
+		fgets(buffer, 512, stdin);
+		
+		ast_node_t *ast = generateTreeThing(buffer);
+		ast = execute(ast);
+		
+		printf("%i\n", (int)ast->value.integer);
+		free(ast);
+	}
 	
 	return 0;
 }

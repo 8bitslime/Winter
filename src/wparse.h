@@ -22,5 +22,6 @@ typedef struct ast_node_t {
 } ast_node_t;
 
 ast_node_t *generateTreeThing(const char *source);
+ast_node_t *execute(ast_node_t *tree);
 
 #endif

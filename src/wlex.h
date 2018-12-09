@@ -41,7 +41,10 @@ typedef enum token_type_t {
 	TK_IDENT,
 	
 	//Literals
-	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR
+	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR,
+	
+	//End of file token
+	TK_EOF
 } token_type_t;
 
 #define isTKOperator(e) ((e) >= TK_INC && (e) <= TK_NOT)
