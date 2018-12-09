@@ -22,7 +22,8 @@ typedef enum object_type_t {
 typedef union object_t {
 	winterInt_t integer;
 	winterFloat_t floating;
-	void *pointer; //Used for tables or strings
+	char *string;
+	void *pointer;
 } object_t;
 
 typedef struct bucket_t {

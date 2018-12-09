@@ -271,22 +271,22 @@ size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
 		token->type = type;
 		switch (type) {
 			case TK_INT: {
-				token->info.integer = (winterInt_t)strtoll(source, NULL, 0);
+				token->value.integer = (winterInt_t)strtoll(source, NULL, 0);
 			} break;
 			
 			case TK_FLOAT: {
-				token->info.floating = (winterFloat_t)strtod(source, NULL);
+				token->value.floating = (winterFloat_t)strtod(source, NULL);
 			} break;
 			
 			case TK_IDENT: {
-				token->info.string = malloc(ret + 1);
-				memcpy(token->info.string, source, ret);
-				token->info.string[ret] = '\0';
+				token->value.string = malloc(ret + 1);
+				memcpy(token->value.string, source, ret);
+				token->value.string[ret] = '\0';
 			} break;
 			
 			case TK_STRING: {
 				//TODO: allow custom allocators
-				token->info.string = malloc(ret - 1);
+				token->value.string = malloc(ret - 1);
 				source++;
 				
 				size_t i = 0;
@@ -294,21 +294,21 @@ size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
 					if (*source == '\\') {
 						winterInt_t character;
 						source += decodeEscape(source, &character);
-						token->info.string[i++] = character;
+						token->value.string[i++] = character;
 					} else {
-						token->info.string[i++] = *source;
+						token->value.string[i++] = *source;
 						source++;
 					}
 				}
 				
-				token->info.string[i] = '\0';
+				token->value.string[i] = '\0';
 			} break;
 			
 			case TK_CHAR: {
 				if (source[1] == '\\') {
-					decodeEscape(source + 1, &token->info.integer);
+					decodeEscape(source + 1, &token->value.integer);
 				} else {
-					token->info.integer = (winterInt_t)source[1];
+					token->value.integer = (winterInt_t)source[1];
 				}
 			} break;
 			

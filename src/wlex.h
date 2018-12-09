@@ -11,6 +11,7 @@
 #define WINLEX_H
 
 #include "winter.h"
+#include "wtable.h"
 
 //All categorizations of tokens, order is specific, do not change please :)
 typedef enum token_type_t {
@@ -45,15 +46,9 @@ typedef enum token_type_t {
 
 #define isTKOperator(e) ((e) >= TK_INC && (e) <= TK_NOT)
 
-typedef union token_info_t {
-	winterInt_t   integer;
-	winterFloat_t floating;
-	char *string;
-} token_info_t;
-
 typedef struct token_t {
 	token_type_t type;
-	token_info_t info;
+	object_t value;
 	//TODO: debug info
 } token_t;
 
