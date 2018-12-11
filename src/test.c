@@ -8,16 +8,19 @@
 #include <stdio.h>
 
 int main(int argc, char **argv) {
-	char buffer[512];
+	char buffer[512] = {0};
 	
 	while (strncmp(buffer, "exit", 4)) {
-		fgets(buffer, 512, stdin);
-		
 		ast_node_t *ast = generateTreeThing(buffer);
 		ast = execute(ast);
 		
-		printf("%i\n", (int)ast->value.integer);
-		free(ast);
+		if (ast != NULL) {
+			printf("%i\n", (int)ast->value.integer);
+			free(ast);
+		}
+		
+		printf(">> ");
+		fgets(buffer, 512, stdin);
 	}
 	
 	return 0;

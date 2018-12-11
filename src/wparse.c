@@ -8,7 +8,6 @@
 
 #include "wparse.h"
 
-#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -66,7 +65,6 @@ static ast_node_t *createNode(const token_t *token) {
 ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
 	token_t token = {0};
 	char *string = (char*)source;
-	size_t forward = 0;
 	
 	token_type_t op_stack[8];
 	int op_stack_size = 0;
@@ -114,51 +112,62 @@ ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
 						expr_stack[expr_stack_size++] = expr;
 					}
 					
-					if (endPtr != NULL) {
-						*endPtr = (char*)(source + forward);
-					}
+					*endPtr = (char*)(string - tkSize);
 					return expr_stack[0];
 				}
 				break;
+			
 			//expect expression
 			case expression:
 				if (token.type == TK_LPAREN) {
-					expr_stack[expr_stack_size++] = _winter_parseExpression(string, &string);
+					ast_node_t *paren = _winter_parseExpression(string, &string);
+					
+					if (paren == NULL) {
+						return NULL;
+					}
+					
+					expr_stack[expr_stack_size++] = paren;
+					
 					_winter_nextToken(string, &string, &token);
 					if (token.type != TK_RPAREN) {
 						printf("expected closing parenthesis\n");
-						exit(EXIT_FAILURE);
+						// exit(EXIT_FAILURE);
+						return NULL;
 					}
 					expect = operator;
 				} else if (isExpression(token.type)) {
 					expr_stack[expr_stack_size++] = createNode(&token);
 					expect = operator;
 				} else {
-					//error, expression cant end like this
-					printf("expected expression\n");
-					exit(EXIT_FAILURE);
-					return NULL;
+					if (expr_stack_size) {
+						//error, expression cant end like this
+						printf("expected an expression\n");
+						// exit(EXIT_FAILURE);
+						return NULL;
+					} else {
+						//no expression
+						return NULL;
+					}
 				}
 				break;
 		}
-		forward += tkSize;
 	}
 	
 	//Should never reach here, unless I messed up.
 	return NULL;
 }
 
-ast_node_t *_winter_parseStatement(const char *source) {
-	char *string;
-	return _winter_parseExpression(source, &string);
+ast_node_t *_winter_parseStatement(const char *source, char **endPtr) {
+	return _winter_parseExpression(source, endPtr);
 }
 
 ast_node_t *generateTreeThing(const char *source) {
-	return _winter_parseStatement(source);
+	char *string;
+	return _winter_parseStatement(source, &string);
 }
 
 ast_node_t *execute(ast_node_t *tree) {
-	if (isOperator(tree->type)) {
+	if (tree && isOperator(tree->type)) {
 		ast_node_t *branch1 = execute(tree->nodes[0]);
 		ast_node_t *branch2 = execute(tree->nodes[1]);
 		switch (tree->type) {
@@ -179,6 +188,7 @@ ast_node_t *execute(ast_node_t *tree) {
 		free(branch1);
 		free(branch2);
 		tree->type = TK_INT;
+		tree->numNodes = 0;
 	}
 	return tree;
 }

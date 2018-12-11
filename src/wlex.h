@@ -47,8 +47,6 @@ typedef enum token_type_t {
 	TK_EOF
 } token_type_t;
 
-#define isTKOperator(e) ((e) >= TK_INC && (e) <= TK_NOT)
-
 typedef struct token_t {
 	token_type_t type;
 	object_t value;
