@@ -17,6 +17,4 @@ typedef double  winterFloat_t;
 //State of the interpreter
 typedef struct winterState_t winterState_t;
 
-typedef struct winterTable_t winterTable_t;
-
 #endif

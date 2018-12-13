@@ -10,12 +10,16 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 #define isExpression(t) ((t) == TK_IDENT || (t) == TK_INT || (t) == TK_FLOAT)
 #define isOperator(t) ((t) >= TK_INC && (t) <= TK_NOT)
 
 static int precedence(token_type_t operator) {
 	switch(operator) {
+		case TK_INT:
+			return 69;
+		
 		case TK_MUL:
 		case TK_DIV:
 		case TK_MOD:
@@ -63,105 +67,63 @@ static ast_node_t *createNode(const token_t *token) {
 }
 
 ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
-	token_t token = {0};
 	char *string = (char*)source;
-	
-	token_type_t op_stack[8];
-	int op_stack_size = 0;
-	
-	ast_node_t *expr_stack[16];
-	int expr_stack_size = 0;
+	ast_node_t *top, *append = NULL;
+	token_t token = {0};
 	
 	enum {
-		operator,
-		expression
+		expression,
+		operator
 	} expect = expression;
 	
 	while (token.type != TK_EOF) {
-		size_t tkSize = _winter_nextToken(string, &string, &token);
+		size_t forward = _winter_nextToken(string, &string, &token);
 		
 		switch (expect) {
-			//expect operator
-			case operator:
-				if (isOperator(token.type)) {
-					while (op_stack_size && precedence(op_stack[op_stack_size - 1]) >= precedence(token.type)) {
-						ast_node_t *expr2 = expr_stack[--expr_stack_size];
-						ast_node_t *expr1 = expr_stack[--expr_stack_size];
-						
-						token_t temp;
-						temp.type = op_stack[--op_stack_size];
-						ast_node_t *expr = createNode(&temp);
-						
-						expr->nodes[0] = expr1;
-						expr->nodes[1] = expr2;
-						expr_stack[expr_stack_size++] = expr;
+			case expression: {
+				if (isExpression(token.type)) {
+					if (append) {
+						append->nodes[1] = createNode(&token);
+					} else {
+						top = append = createNode(&token);
 					}
-					op_stack[op_stack_size++] = token.type;
+					expect = operator;
+				} else {
+					return NULL;
+				}
+			} break;
+			
+			case operator: {
+				if (isOperator(token.type)) {
+					if (precedence(top->type) >= precedence(token.type)) {
+						ast_node_t *node = createNode(&token);
+						node->nodes[0] = top;
+						top = append = node;
+					} else {
+						ast_node_t *current = top;
+						while (precedence(current->nodes[1]->type) < precedence(token.type)) {
+							current = current->nodes[1];
+						}
+						ast_node_t *node = createNode(&token);
+						node->nodes[0] = current->nodes[1];
+						current->nodes[1] = node;
+						append = node;
+					}
 					expect = expression;
 				} else {
-					while (op_stack_size) {
-						ast_node_t *expr2 = expr_stack[--expr_stack_size];
-						ast_node_t *expr1 = expr_stack[--expr_stack_size];
-						
-						token_t temp;
-						temp.type = op_stack[--op_stack_size];
-						ast_node_t *expr = createNode(&temp);
-						
-						expr->nodes[0] = expr1;
-						expr->nodes[1] = expr2;
-						expr_stack[expr_stack_size++] = expr;
-					}
-					
-					*endPtr = (char*)(string - tkSize);
-					return expr_stack[0];
+					return top;
 				}
-				break;
-			
-			//expect expression
-			case expression:
-				if (token.type == TK_LPAREN) {
-					ast_node_t *paren = _winter_parseExpression(string, &string);
-					
-					if (paren == NULL) {
-						return NULL;
-					}
-					
-					expr_stack[expr_stack_size++] = paren;
-					
-					_winter_nextToken(string, &string, &token);
-					if (token.type != TK_RPAREN) {
-						printf("expected closing parenthesis\n");
-						// exit(EXIT_FAILURE);
-						return NULL;
-					}
-					expect = operator;
-				} else if (isExpression(token.type)) {
-					expr_stack[expr_stack_size++] = createNode(&token);
-					expect = operator;
-				} else {
-					if (expr_stack_size) {
-						//error, expression cant end like this
-						printf("expected an expression\n");
-						// exit(EXIT_FAILURE);
-						return NULL;
-					} else {
-						//no expression
-						return NULL;
-					}
-				}
-				break;
+			} break;
 		}
 	}
-	
-	//Should never reach here, unless I messed up.
-	return NULL;
+	return top;
 }
 
 ast_node_t *_winter_parseStatement(const char *source, char **endPtr) {
 	return _winter_parseExpression(source, endPtr);
 }
 
-ast_node_t *generateTreeThing(const char *source) {
+ast_node_t *generateTreeThing(winterState_t *state, const char *source) {
 	char *string;
 	return _winter_parseStatement(source, &string);
 }
@@ -182,6 +144,9 @@ ast_node_t *execute(ast_node_t *tree) {
 				break;
 			case TK_DIV:
 				tree->value.integer = branch1->value.integer / branch2->value.integer;
+				break;
+			case TK_MOD:
+				tree->value.integer = branch1->value.integer % branch2->value.integer;
 				break;
 			default: break;
 		}

@@ -9,14 +9,20 @@
 
 int main(int argc, char **argv) {
 	char buffer[512] = {0};
+	winterState_t *state;
 	
 	while (strncmp(buffer, "exit", 4)) {
-		ast_node_t *ast = generateTreeThing(buffer);
-		ast = execute(ast);
 		
-		if (ast != NULL) {
-			printf("%i\n", (int)ast->value.integer);
-			free(ast);
+		if (buffer[0]) {
+			ast_node_t *ast = generateTreeThing(state, buffer);
+			ast = execute(ast);
+			
+			if (ast != NULL) {
+				printf("%i\n", (int)ast->value.integer);
+				free(ast);
+			} else {
+				printf("AST returned NULL\n");
+			}
 		}
 		
 		printf(">> ");
