@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 				printf("%i\n", (int)ast->value.integer);
 				free(ast);
 			} else {
-				printf("AST returned NULL\n");
+				printf("ERROR\n");
 			}
 		}
 		

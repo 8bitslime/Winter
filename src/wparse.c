@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#define isExpression(t) ((t) == TK_IDENT || (t) == TK_INT || (t) == TK_FLOAT)
+#define isExpression(t) ((t) == TK_IDENT || (t) == TK_INT || (t) == TK_FLOAT || (t) == TK_LPAREN)
 #define isOperator(t) ((t) >= TK_INC && (t) <= TK_NOT)
 
 static int precedence(token_type_t operator) {
@@ -29,8 +29,6 @@ static int precedence(token_type_t operator) {
 		case TK_SUB:
 			return 0;
 		
-		case TK_LPAREN:
-		case TK_RPAREN:
 		default:
 			return -1;
 	}
@@ -68,7 +66,7 @@ static ast_node_t *createNode(const token_t *token) {
 
 ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
 	char *string = (char*)source;
-	ast_node_t *top, *append = NULL;
+	ast_node_t *top, *append = NULL, *parenthesis = NULL;
 	token_t token = {0};
 	
 	enum {
@@ -82,10 +80,23 @@ ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
 		switch (expect) {
 			case expression: {
 				if (isExpression(token.type)) {
-					if (append) {
-						append->nodes[1] = createNode(&token);
+					ast_node_t *node;
+					
+					if (token.type == TK_LPAREN) {
+						node = parenthesis = _winter_parseExpression(string, &string);
+						_winter_nextToken(string, &string, &token);
+						
+						if (token.type != TK_RPAREN) {
+							return NULL;
+						}
 					} else {
-						top = append = createNode(&token);
+						node = createNode(&token);
+					}
+					
+					if (append) {
+						append->nodes[1] = node;
+					} else {
+						top = node;
 					}
 					expect = operator;
 				} else {
@@ -95,22 +106,24 @@ ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
 			
 			case operator: {
 				if (isOperator(token.type)) {
-					if (precedence(top->type) >= precedence(token.type)) {
-						ast_node_t *node = createNode(&token);
+					ast_node_t *node = createNode(&token);
+					
+					if (top == parenthesis || precedence(top->type) >= precedence(token.type)) {
 						node->nodes[0] = top;
 						top = append = node;
 					} else {
 						ast_node_t *current = top;
-						while (precedence(current->nodes[1]->type) < precedence(token.type)) {
+						while (current != parenthesis && precedence(current->nodes[1]->type) < precedence(token.type)) {
 							current = current->nodes[1];
 						}
-						ast_node_t *node = createNode(&token);
 						node->nodes[0] = current->nodes[1];
 						current->nodes[1] = node;
 						append = node;
 					}
+					
 					expect = expression;
 				} else {
+					*endPtr = string - forward;
 					return top;
 				}
 			} break;
