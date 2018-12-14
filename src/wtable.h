@@ -38,9 +38,9 @@ typedef struct winterTable_t {
 	size_t size;
 } winterTable_t;
 
-void _winter_tableAlloc(winterTable_t *table, size_t initial);
+void _winter_tableAlloc(winterAllocator_t allocator, winterTable_t *table, size_t initial);
 
-void _winter_tableInsertInt(winterTable_t *table, const char *name, winterInt_t value);
+void _winter_tableInsertInt(winterAllocator_t allocator, winterTable_t *table, const char *name, winterInt_t value);
 void _winter_tableInsertFloat(winterTable_t *table, const char *name, winterFloat_t value);
 
 winterInt_t _winter_tableToInt(winterTable_t *table, const char *name);

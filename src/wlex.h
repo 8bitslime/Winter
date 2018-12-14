@@ -53,6 +53,6 @@ typedef struct token_t {
 	//TODO: debug info
 } token_t;
 
-size_t _winter_nextToken(const char *source, char **endPtr, token_t *token);
+size_t _winter_nextToken(winterAllocator_t allocator, const char *source, char **endPtr, token_t *token);
 
 #endif

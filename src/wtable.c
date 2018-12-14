@@ -22,8 +22,9 @@ static unsigned long hashString(const char *string) {
 	return out;
 }
 
-void _winter_tableAlloc(winterTable_t *table, size_t initial) {
-	table->buckets = calloc(sizeof(bucket_t), initial);
+void _winter_tableAlloc(winterAllocator_t allocator, winterTable_t *table, size_t initial) {
+	table->buckets = allocator(NULL, sizeof(bucket_t) * initial);
+	memset(table->buckets, 0, sizeof(bucket_t) * initial);
 	assert(table->buckets != NULL);
 	
 	table->numBuckets = initial;
@@ -39,11 +40,11 @@ static bucket_t *getBucket(winterTable_t *table, const char *name) {
 	return slot;
 }
 
-void _winter_tableInsertInt(winterTable_t *table, const char *name, winterInt_t value) {
+void _winter_tableInsertInt(winterAllocator_t allocator, winterTable_t *table, const char *name, winterInt_t value) {
 	bucket_t *bucket = getBucket(table, name);
 	if (bucket != NULL) {
 		//TODO: better allocation
-		bucket->name = malloc(strlen(name) + 1);
+		bucket->name = allocator(NULL, strlen(name) + 1);
 		strcpy(bucket->name, name);
 		bucket->type = TYPE_INT;
 		bucket->value.integer = value;

@@ -7,6 +7,7 @@
 */
 
 #include "wparse.h"
+#include "wstate.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,54 +18,57 @@
 
 static int precedence(token_type_t operator) {
 	switch(operator) {
-		case TK_INT:
-			return 69;
-		
 		case TK_MUL:
 		case TK_DIV:
 		case TK_MOD:
-			return 1;
+			return 2;
 		
 		case TK_ADD:
 		case TK_SUB:
+			return 1;
+		
+		case TK_EQ:
+		case TK_ASSIGN:
 			return 0;
 		
 		default:
-			return -1;
+			return 42;
 	}
 }
 
-static ast_node_t *allocNode(size_t numNodes) {
+static int associativity(token_type_t operator) {
+	switch (operator) {
+		case TK_ASSIGN:
+			return 0;
+		
+		default:
+			return 1;
+	}
+}
+
+static ast_node_t *allocNode(winterAllocator_t allocator, size_t numNodes) {
 	//TODO: better allocator
-	ast_node_t *ret = malloc(sizeof(ast_node_t) + sizeof(ast_node_t*) * numNodes);
+	ast_node_t *ret = allocator(NULL, sizeof(ast_node_t) + sizeof(ast_node_t*) * numNodes);
 	ret->numNodes = numNodes;
 	ret->nodes = (ast_node_t**)(ret + 1);
 	return ret;
 }
 
-static ast_node_t *createNode(const token_t *token) {
+static ast_node_t *createNode(winterAllocator_t allocator, const token_t *token) {
 	ast_node_t *ret = NULL;
 	
 	if (isExpression(token->type)) {
-		ret = allocNode(0);
-		switch (token->type) {
-			case TK_INT:
-				ret->value.integer = token->value.integer;
-				break;
-			case TK_FLOAT:
-				ret->value.floating = token->value.floating;
-				break;
-			default: break;
-		}
+		ret = allocNode(allocator, 0);
+		ret->value = token->value;
 	} else if (isOperator(token->type)) {
-		ret = allocNode(2);
+		ret = allocNode(allocator, 2);
 	}
 	
 	ret->type = token->type;
 	return ret;
 }
 
-ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
+ast_node_t *_winter_parseExpression(winterAllocator_t allocator, const char *source, char **endPtr) {
 	char *string = (char*)source;
 	ast_node_t *top, *append = NULL, *parenthesis = NULL;
 	token_t token = {0};
@@ -75,7 +79,7 @@ ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
 	} expect = expression;
 	
 	while (token.type != TK_EOF) {
-		size_t forward = _winter_nextToken(string, &string, &token);
+		size_t forward = _winter_nextToken(allocator, string, &string, &token);
 		
 		switch (expect) {
 			case expression: {
@@ -83,14 +87,14 @@ ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
 					ast_node_t *node;
 					
 					if (token.type == TK_LPAREN) {
-						node = parenthesis = _winter_parseExpression(string, &string);
-						_winter_nextToken(string, &string, &token);
+						node = parenthesis = _winter_parseExpression(allocator, string, &string);
+						_winter_nextToken(allocator, string, &string, &token);
 						
 						if (token.type != TK_RPAREN) {
 							return NULL;
 						}
 					} else {
-						node = createNode(&token);
+						node = createNode(allocator, &token);
 					}
 					
 					if (append) {
@@ -106,14 +110,16 @@ ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
 			
 			case operator: {
 				if (isOperator(token.type)) {
-					ast_node_t *node = createNode(&token);
+					ast_node_t *node = createNode(allocator, &token);
 					
-					if (top == parenthesis || precedence(top->type) >= precedence(token.type)) {
+					if (top == parenthesis || (associativity(top->type) && precedence(top->type) >= precedence(token.type))) {
 						node->nodes[0] = top;
 						top = append = node;
 					} else {
 						ast_node_t *current = top;
-						while (current != parenthesis && precedence(current->nodes[1]->type) < precedence(token.type)) {
+						while (current->nodes[1] != parenthesis &&
+							   precedence(current->nodes[1]->type) < precedence(token.type)) {
+							
 							current = current->nodes[1];
 						}
 						node->nodes[0] = current->nodes[1];
@@ -132,40 +138,64 @@ ast_node_t *_winter_parseExpression(const char *source, char **endPtr) {
 	return top;
 }
 
-ast_node_t *_winter_parseStatement(const char *source, char **endPtr) {
-	return _winter_parseExpression(source, endPtr);
+ast_node_t *_winter_parseStatement(winterAllocator_t allocator, const char *source, char **endPtr) {
+	return _winter_parseExpression(allocator, source, endPtr);
 }
 
 ast_node_t *generateTreeThing(winterState_t *state, const char *source) {
 	char *string;
-	return _winter_parseStatement(source, &string);
+	return _winter_parseStatement(state->allocator, source, &string);
 }
 
-ast_node_t *execute(ast_node_t *tree) {
+static winterInt_t branchToInt(winterState_t *state, ast_node_t *branch) {
+	switch (branch->type) {
+		case TK_INT:
+			return branch->value.integer;
+		case TK_FLOAT:
+			return (winterInt_t)branch->value.floating;
+		case TK_IDENT:
+			return _winter_tableToInt(&state->globalState, branch->value.string);
+		default: return 0;
+	}
+}
+
+ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 	if (tree && isOperator(tree->type)) {
-		ast_node_t *branch1 = execute(tree->nodes[0]);
-		ast_node_t *branch2 = execute(tree->nodes[1]);
+		ast_node_t *branch1 = execute(state, tree->nodes[0]);
+		ast_node_t *branch2 = execute(state, tree->nodes[1]);
 		switch (tree->type) {
 			case TK_ADD:
-				tree->value.integer = branch1->value.integer + branch2->value.integer;
+				tree->value.integer = branchToInt(state, branch1) + branchToInt(state, branch2);
 				break;
 			case TK_SUB:
-				tree->value.integer = branch1->value.integer - branch2->value.integer;
+				tree->value.integer = branchToInt(state, branch1) - branchToInt(state, branch2);
 				break;
 			case TK_MUL:
-				tree->value.integer = branch1->value.integer * branch2->value.integer;
+				tree->value.integer = branchToInt(state, branch1) * branchToInt(state, branch2);
 				break;
 			case TK_DIV:
-				tree->value.integer = branch1->value.integer / branch2->value.integer;
+				tree->value.integer = branchToInt(state, branch1) / branchToInt(state, branch2);
 				break;
 			case TK_MOD:
-				tree->value.integer = branch1->value.integer % branch2->value.integer;
+				tree->value.integer = branchToInt(state, branch1) % branchToInt(state, branch2);
+				break;
+			case TK_EQ:
+				tree->value.integer = branchToInt(state, branch1) == branchToInt(state, branch2);
+				break;
+			case TK_ASSIGN:
+				if (branch1->type == TK_IDENT) {
+					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, branchToInt(state, branch2));
+					tree->type = TK_IDENT;
+					tree->value.string = branch1->value.string;
+				}
 				break;
 			default: break;
 		}
-		free(branch1);
-		free(branch2);
-		tree->type = TK_INT;
+		state->allocator(branch1, 0);
+		state->allocator(branch2, 0);
+		if (isOperator(tree->type)) {
+			tree->type = TK_INT;
+		}
 		tree->numNodes = 0;
 	}
 	return tree;

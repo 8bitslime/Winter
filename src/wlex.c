@@ -226,7 +226,7 @@ static size_t decodeEscape(const char *source, winterInt_t *character) {
 	return 0;
 }
 
-size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
+size_t _winter_nextToken(winterAllocator_t allocator, const char *source, char **endPtr, token_t *token) {
 	size_t ret = 0;
 	token_type_t type;
 	
@@ -282,14 +282,14 @@ size_t _winter_nextToken(const char *source, char **endPtr, token_t *token) {
 			} break;
 			
 			case TK_IDENT: {
-				token->value.string = malloc(ret + 1);
+				token->value.string = allocator(NULL, ret + 1);
 				memcpy(token->value.string, source, ret);
 				token->value.string[ret] = '\0';
 			} break;
 			
 			case TK_STRING: {
 				//TODO: allow custom allocators
-				token->value.string = malloc(ret - 1);
+				token->value.string = allocator(NULL, ret - 1);
 				source++;
 				
 				size_t i = 0;
