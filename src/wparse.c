@@ -117,10 +117,16 @@ ast_node_t *_winter_parseExpression(winterAllocator_t allocator, const char *sou
 						top = append = node;
 					} else {
 						ast_node_t *current = top;
-						while (current->nodes[1] != parenthesis &&
-							   precedence(current->nodes[1]->type) < precedence(token.type)) {
-							
-							current = current->nodes[1];
+						if (associativity(token.type)) {
+							while (current->nodes[1] != parenthesis &&
+								precedence(current->nodes[1]->type) < precedence(token.type)) {
+								
+								current = current->nodes[1];
+							}
+						} else {
+							while (isOperator(current->nodes[1]->type)) {
+								current = current->nodes[1];
+							}
 						}
 						node->nodes[0] = current->nodes[1];
 						current->nodes[1] = node;
@@ -185,17 +191,15 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 			case TK_ASSIGN:
 				if (branch1->type == TK_IDENT) {
 					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, branchToInt(state, branch2));
-					tree->type = TK_IDENT;
-					tree->value.string = branch1->value.string;
+					tree->type = TK_INT;
+					tree->value.integer = branchToInt(state, branch2);
 				}
 				break;
 			default: break;
 		}
 		state->allocator(branch1, 0);
 		state->allocator(branch2, 0);
-		if (isOperator(tree->type)) {
-			tree->type = TK_INT;
-		}
+		tree->type = TK_INT;
 		tree->numNodes = 0;
 	}
 	return tree;
