@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 static unsigned long hashString(const char *string) {
 	unsigned long out = 5381, c;
@@ -33,32 +34,43 @@ void _winter_tableAlloc(winterAllocator_t allocator, winterTable_t *table, size_
 
 static bucket_t *getBucket(winterTable_t *table, const char *name) {
 	unsigned long hash = hashString(name) % table->numBuckets;
+	unsigned long index = hash;
 	bucket_t *slot = &table->buckets[hash];
 	
-	//TODO: check name
-	while (slot->name && strcmp(name, slot->name)) slot++;
+	while (slot->name && strcmp(name, slot->name) != 0) {
+		index = (index + 1) % table->numBuckets;
+		if (index == hash) {
+			return NULL;
+		}
+		slot = &table->buckets[index];
+	}
+	printf("%s hashed in slot: %lu\n", name, index);
 	return slot;
 }
 
 void _winter_tableInsertInt(winterAllocator_t allocator, winterTable_t *table, const char *name, winterInt_t value) {
 	bucket_t *bucket = getBucket(table, name);
 	if (bucket != NULL) {
-		//TODO: better allocation
-		bucket->name = allocator(NULL, strlen(name) + 1);
-		strcpy(bucket->name, name);
+		if (bucket->name == NULL) {
+			bucket->name = allocator(NULL, strlen(name) + 1);
+			strcpy(bucket->name, name);
+			table->size++;
+		}
 		bucket->type = TYPE_INT;
 		bucket->value.integer = value;
 	}
 }
-void _winter_tableInsertFloat(winterTable_t *table, const char *name, winterFloat_t value) {
+void _winter_tableInsertFloat(winterAllocator_t allocator, winterTable_t *table, const char *name, winterFloat_t value) {
 	bucket_t *bucket = getBucket(table, name);
 	if (bucket != NULL) {
-		bucket->name = malloc(strlen(name) + 1);
-		strcpy(bucket->name, name);
+		if (bucket->name == NULL) {
+			bucket->name = allocator(NULL, strlen(name) + 1);
+			strcpy(bucket->name, name);
+			table->size++;
+		}
 		bucket->type = TYPE_FLOAT;
 		bucket->value.floating = value;
 	}
-	//else realloc
 }
 
 winterInt_t _winter_tableToInt(winterTable_t *table, const char *name) {

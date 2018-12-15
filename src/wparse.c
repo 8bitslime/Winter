@@ -159,8 +159,11 @@ static winterInt_t branchToInt(winterState_t *state, ast_node_t *branch) {
 			return branch->value.integer;
 		case TK_FLOAT:
 			return (winterInt_t)branch->value.floating;
-		case TK_IDENT:
-			return _winter_tableToInt(&state->globalState, branch->value.string);
+		case TK_IDENT: {
+			winterInt_t ret = _winter_tableToInt(&state->globalState, branch->value.string);
+			state->allocator(branch->value.string, 0);
+			return ret;
+		}
 		default: return 0;
 	}
 }
@@ -190,9 +193,12 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 				break;
 			case TK_ASSIGN:
 				if (branch1->type == TK_IDENT) {
-					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, branchToInt(state, branch2));
-					tree->type = TK_INT;
-					tree->value.integer = branchToInt(state, branch2);
+					winterInt_t integer = branchToInt(state, branch2);
+					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, integer);
+					tree->value.integer = integer;
+					state->allocator(branch1->value.string, 0);
+				} else {
+					tree->value.integer = 0;
 				}
 				break;
 			default: break;
