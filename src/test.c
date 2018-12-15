@@ -40,6 +40,9 @@ int main(int argc, char **argv) {
 						break;
 					case TK_IDENT:
 						printf("%s: %i\n", ast->value.string, _winter_tableToInt(&state->globalState, ast->value.string));
+						break;
+					default:
+						printf("Token type: %i\n", ast->type);
 				}
 				allocator(ast, 0);
 			}

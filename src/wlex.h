@@ -30,7 +30,8 @@ typedef enum token_type_t {
 	
 	//Operators
 	TK_INC, TK_DEC,
-	TK_MIN_EQ, TK_ADD_EQ, TK_EQ, TK_NEQ,
+	TK_MIN_EQ, TK_ADD_EQ, TK_MUL_EQ, TK_DIV_EQ,
+	TK_EQ, TK_NEQ,
 	TK_LEQ, TK_GEQ,
 	TK_OR, TK_AND,
 	TK_DOT, TK_ASSIGN, TK_LESS, TK_GREAT,
@@ -42,6 +43,9 @@ typedef enum token_type_t {
 	
 	//Literals
 	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR,
+	
+	//Tokens for parsing only
+	TK_NEGATE,
 	
 	//End of file token
 	TK_EOF
