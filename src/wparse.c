@@ -29,6 +29,8 @@ static int precedence(token_type_t operator) {
 		
 		case TK_EQ:
 		case TK_ASSIGN:
+		case TK_ADD_EQ:
+		case TK_MIN_EQ:
 			return 0;
 		
 		default:
@@ -39,6 +41,8 @@ static int precedence(token_type_t operator) {
 static int associativity(token_type_t operator) {
 	switch (operator) {
 		case TK_ASSIGN:
+		case TK_ADD_EQ:
+		case TK_MIN_EQ:
 			return 0;
 		
 		default:
@@ -190,6 +194,26 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 				break;
 			case TK_EQ:
 				tree->value.integer = branchToInt(state, branch1) == branchToInt(state, branch2);
+				break;
+			case TK_ADD_EQ:
+				if (branch1->type == TK_IDENT) {
+					winterInt_t integer = _winter_tableToInt(&state->globalState, branch1->value.string) + branchToInt(state, branch2);
+					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, integer);
+					tree->value.integer = integer;
+					state->allocator(branch1->value.string, 0);
+				} else {
+					tree->value.integer = 0;
+				}
+				break;
+			case TK_MIN_EQ:
+				if (branch1->type == TK_IDENT) {
+					winterInt_t integer = _winter_tableToInt(&state->globalState, branch1->value.string) - branchToInt(state, branch2);
+					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, integer);
+					tree->value.integer = integer;
+					state->allocator(branch1->value.string, 0);
+				} else {
+					tree->value.integer = 0;
+				}
 				break;
 			case TK_ASSIGN:
 				if (branch1->type == TK_IDENT) {

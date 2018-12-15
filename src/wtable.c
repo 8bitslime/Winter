@@ -44,7 +44,7 @@ static bucket_t *getBucket(winterTable_t *table, const char *name) {
 		}
 		slot = &table->buckets[index];
 	}
-	printf("%s hashed in slot: %lu\n", name, index);
+	// printf("%s hashed in slot: %lu\n", name, index);
 	return slot;
 }
 
