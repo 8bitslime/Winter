@@ -12,6 +12,7 @@
 
 #include "winter.h"
 #include "wtable.h"
+#include "wobject.h"
 
 //All categorizations of tokens, order is specific, do not change please :)
 typedef enum token_type_t {
@@ -29,7 +30,7 @@ typedef enum token_type_t {
 	TK_LCURLY, TK_RCURLY,
 	
 	//Operators
-	TK_INC, TK_DEC,
+	TK_INC, TK_DEC, TK_EXP,
 	TK_MIN_EQ, TK_ADD_EQ, TK_MUL_EQ, TK_DIV_EQ,
 	TK_EQ, TK_NEQ,
 	TK_LEQ, TK_GEQ,
@@ -45,7 +46,7 @@ typedef enum token_type_t {
 	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR,
 	
 	//Tokens for parsing only
-	TK_NEGATE,
+	TK_VALUE, TK_NEGATE, TK_PRE_INC, TK_PRE_DEC,
 	
 	//End of file token
 	TK_EOF
@@ -53,7 +54,7 @@ typedef enum token_type_t {
 
 typedef struct token_t {
 	token_type_t type;
-	object_t value;
+	winterObject_t value;
 	//TODO: debug info
 } token_t;
 

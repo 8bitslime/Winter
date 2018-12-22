@@ -5,6 +5,7 @@ set(CMAKE_BUILD_TYPE DEBUG)
 
 set(WINTER_SOURCES
 	src/wlex.c
+	src/wobject.c
 	src/wparse.c
 	src/wstate.c
 	src/wtable.c

@@ -24,7 +24,7 @@ static const char *keywords[] = {
 
 static const char *operators[] = {
 	//all multicharacter operators
-	"++", "--", "-=", "+=", "*=", "/=", "==", "!=", "<=", ">=", "||", "&&",
+	"++", "--", "**", "-=", "+=", "*=", "/=", "==", "!=", "<=", ">=", "||", "&&",
 };	
 static const char* single_operators = ".=<>+-*/%|&!";
 static const char *symbols = ",;:()[]{}";
@@ -274,10 +274,14 @@ size_t _winter_nextToken(winterAllocator_t allocator, const char *source, char *
 		token->type = type;
 		switch (type) {
 			case TK_INT: {
+				token->type = TK_VALUE;
+				token->value.type = TYPE_INT;
 				token->value.integer = (winterInt_t)strtoll(source, NULL, 0);
 			} break;
 			
 			case TK_FLOAT: {
+				token->type = TK_VALUE;
+				token->value.type = TYPE_FLOAT;
 				token->value.floating = (winterFloat_t)strtod(source, NULL);
 			} break;
 			
@@ -304,10 +308,14 @@ size_t _winter_nextToken(winterAllocator_t allocator, const char *source, char *
 					}
 				}
 				
+				token->type = TK_VALUE;
+				token->value.type = TYPE_STRING;
 				token->value.string[i] = '\0';
 			} break;
 			
 			case TK_CHAR: {
+				token->type = TK_VALUE;
+				token->value.type = TYPE_INT;
 				if (source[1] == '\\') {
 					decodeEscape(source + 1, &token->value.integer);
 				} else {

@@ -48,6 +48,17 @@ static bucket_t *getBucket(winterTable_t *table, const char *name) {
 	return slot;
 }
 
+void _winter_tableInsert(winterAllocator_t allocator, winterTable_t *table, const char *name, const winterObject_t *value) {
+	bucket_t *bucket = getBucket(table, name);
+	if (bucket != NULL) {
+		if (bucket->name == NULL) {
+			bucket->name = allocator(NULL, strlen(name) + 1);
+			strcpy(bucket->name, name);
+			table->size++;
+		}
+		bucket->object = *value;
+	}
+}
 void _winter_tableInsertInt(winterAllocator_t allocator, winterTable_t *table, const char *name, winterInt_t value) {
 	bucket_t *bucket = getBucket(table, name);
 	if (bucket != NULL) {
@@ -56,8 +67,8 @@ void _winter_tableInsertInt(winterAllocator_t allocator, winterTable_t *table, c
 			strcpy(bucket->name, name);
 			table->size++;
 		}
-		bucket->type = TYPE_INT;
-		bucket->value.integer = value;
+		bucket->object.type = TYPE_INT;
+		bucket->object.integer = value;
 	}
 }
 void _winter_tableInsertFloat(winterAllocator_t allocator, winterTable_t *table, const char *name, winterFloat_t value) {
@@ -68,20 +79,29 @@ void _winter_tableInsertFloat(winterAllocator_t allocator, winterTable_t *table,
 			strcpy(bucket->name, name);
 			table->size++;
 		}
-		bucket->type = TYPE_FLOAT;
-		bucket->value.floating = value;
+		bucket->object.type = TYPE_FLOAT;
+		bucket->object.floating = value;
 	}
 }
 
+
+winterObject_t *_winter_tableGetObject(winterTable_t *table, const char *name) {
+	bucket_t *bucket = getBucket(table, name);
+	if (bucket && bucket->name != NULL) {
+		return &bucket->object;
+	} else {
+		return NULL;
+	}
+}
 winterInt_t _winter_tableToInt(winterTable_t *table, const char *name) {
 	bucket_t *bucket = getBucket(table, name);
-	if (bucket != NULL && bucket->name != NULL) {
-		switch (bucket->type) {
+	if (bucket && bucket->name != NULL) {
+		switch (bucket->object.type) {
 			case TYPE_INT:
-				return bucket->value.integer;
+				return bucket->object.integer;
 			
 			case TYPE_FLOAT:
-				return (winterInt_t)bucket->value.floating;
+				return (winterInt_t)bucket->object.floating;
 				
 			default:
 				assert(0);
@@ -94,12 +114,12 @@ winterInt_t _winter_tableToInt(winterTable_t *table, const char *name) {
 winterFloat_t _winter_tableToFloat(winterTable_t *table, const char *name) {
 	bucket_t *bucket = getBucket(table, name);
 	if (bucket != NULL && bucket->name != NULL) {
-		switch (bucket->type) {
+		switch (bucket->object.type) {
 			case TYPE_INT:
-				return (winterFloat_t)bucket->value.integer;
+				return (winterFloat_t)bucket->object.integer;
 			
 			case TYPE_FLOAT:
-				return bucket->value.floating;
+				return bucket->object.floating;
 				
 			default:
 				assert(0);

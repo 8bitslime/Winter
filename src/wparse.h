@@ -12,10 +12,11 @@
 #include "winter.h"
 #include "wlex.h"
 #include "wtable.h"
+#include "wobject.h"
 
 typedef struct ast_node_t {
 	token_type_t type;
-	object_t value;
+	winterObject_t value;
 	
 	int numNodes;
 	struct ast_node_t **nodes;

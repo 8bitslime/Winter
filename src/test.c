@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 	char buffer[512] = {0};
 	winterState_t *state = winterCreateState(allocator);
 	
-	while (strncmp(buffer, "exit", 4)) {
+	while (strcmp(buffer, "exit\n")) {
 		
 		if (buffer[0]) {
 			ast_node_t *ast = generateTreeThing(state, buffer);
@@ -34,15 +34,18 @@ int main(int argc, char **argv) {
 			if (ast == NULL) {
 				printf("ERROR\n");
 			} else {
-				switch (ast->type) {
-					case TK_INT:
-						printf("%i\n", (int)ast->value.integer);
+				winterObject_t *object = &ast->value;
+				if (ast->type == TK_IDENT) {
+					object = _winter_tableGetObject(&state->globalState, ast->value.string);
+				}
+				switch (object->type) {
+					case TYPE_INT:
+						printf("%i\n", (int)object->integer);
 						break;
-					case TK_IDENT:
-						printf("%s: %i\n", ast->value.string, _winter_tableToInt(&state->globalState, ast->value.string));
+					case TYPE_FLOAT:
+						printf("%f\n", object->floating);
 						break;
-					default:
-						printf("Token type: %i\n", ast->type);
+					default: break;
 				}
 				allocator(ast, 0);
 			}

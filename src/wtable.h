@@ -10,26 +10,11 @@
 #define WTABLE_H
 
 #include "winter.h"
-
-//Possible types of an object
-typedef enum object_type_t {
-	TYPE_UNKNOWN = 0,
-	TYPE_INT, TYPE_FLOAT,
-	TYPE_STRING, TYPE_TABLE,
-	TYPE_FUNCTION
-} object_type_t;
-
-typedef union object_t {
-	winterInt_t integer;
-	winterFloat_t floating;
-	char *string;
-	void *pointer;
-} object_t;
+#include "wobject.h"
 
 typedef struct bucket_t {
 	char *name;
-	object_type_t type;
-	object_t value;
+	winterObject_t object;
 } bucket_t;
 
 typedef struct winterTable_t {
@@ -40,9 +25,11 @@ typedef struct winterTable_t {
 
 void _winter_tableAlloc(winterAllocator_t allocator, winterTable_t *table, size_t initial);
 
+void _winter_tableInsert(winterAllocator_t allocator, winterTable_t *table, const char *name, const winterObject_t *object);
 void _winter_tableInsertInt(winterAllocator_t allocator, winterTable_t *table, const char *name, winterInt_t value);
 void _winter_tableInsertFloat(winterAllocator_t allocator, winterTable_t *table, const char *name, winterFloat_t value);
 
+winterObject_t *_winter_tableGetObject(winterTable_t *table, const char *name);
 winterInt_t _winter_tableToInt(winterTable_t *table, const char *name);
 winterFloat_t _winter_tableToFloat(winterTable_t *table, const char *name);
 
