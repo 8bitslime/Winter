@@ -8,6 +8,8 @@
 
 #include "wobject.h"
 
+#define typeCheck(ta, tb) (a->type == (ta) && b->type == (tb))
+
 int _winter_objectToInt(winterObject_t *dest, const winterObject_t *a) {
 	switch (a->type) {
 		case TYPE_INT:
@@ -23,68 +25,99 @@ int _winter_objectToInt(winterObject_t *dest, const winterObject_t *a) {
 	}
 }
 
-int _winter_objectAdd(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+static winterFloat_t toFloat(const winterObject_t *a) {
 	switch (a->type) {
-		case TYPE_INT: {
-			if (b->type == TYPE_INT) {
-				dest->type = TYPE_INT;
-				dest->integer = a->integer + b->integer;
-				return 1;
-			} else if (b->type == TYPE_FLOAT) {
-				dest->type = TYPE_FLOAT;
-				dest->floating = (winterFloat_t)a->integer + b->floating;
-				return 1;
-			}
+		case TYPE_INT:
+			return (winterFloat_t)a->integer;
+		case TYPE_FLOAT:
+			return a->floating;
+		default:
 			return 0;
-		} break;
-		
-		case TYPE_FLOAT: {
-			if (b->type == TYPE_FLOAT) {
-				dest->type = TYPE_FLOAT;
-				dest->floating = a->floating + b->floating;
-				return 1;
-			} else if (b->type == TYPE_INT) {
-				dest->type = TYPE_FLOAT;
-				dest->integer = (winterInt_t)a->floating + b->integer;
-				return 1;
-			}
-			return 0;
-		} break;
-		
-		default: break;
 	}
+}
+
+int _winter_objectAdd(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+	if (typeCheck(TYPE_INT, TYPE_INT)) {
+		dest->type = TYPE_INT;
+		dest->integer = a->integer + b->integer;
+		return 1;
+	} else if (typeCheck(TYPE_FLOAT, TYPE_FLOAT)) {
+		dest->type = TYPE_FLOAT;
+		dest->floating = a->floating + b->floating;
+		return 1;
+	} else if (typeCheck(TYPE_FLOAT, TYPE_INT) || typeCheck(TYPE_INT, TYPE_FLOAT)) {
+		dest->floating = toFloat(a) + toFloat(b);
+		dest->type = TYPE_FLOAT;
+		return 1;
+	}
+	
 	return 0;
 }
 
 int _winter_objectSub(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
-	switch (a->type) {
-		case TYPE_INT: {
-			if (b->type == TYPE_INT) {
-				dest->type = TYPE_INT;
-				dest->integer = a->integer - b->integer;
-				return 1;
-			} else if (b->type == TYPE_FLOAT) {
-				dest->type = TYPE_FLOAT;
-				dest->floating = (winterFloat_t)a->integer - b->floating;
-				return 1;
-			}
-			return 0;
-		} break;
-		
-		case TYPE_FLOAT: {
-			if (b->type == TYPE_FLOAT) {
-				dest->type = TYPE_FLOAT;
-				dest->floating = a->floating - b->floating;
-				return 1;
-			} else if (b->type == TYPE_INT) {
-				dest->type = TYPE_FLOAT;
-				dest->floating = a->floating - (winterFloat_t)b->integer;
-				return 1;
-			}
-			return 0;
-		} break;
-		
-		default: break;
+	if (typeCheck(TYPE_INT, TYPE_INT)) {
+		dest->type = TYPE_INT;
+		dest->integer = a->integer - b->integer;
+		return 1;
+	} else if (typeCheck(TYPE_FLOAT, TYPE_FLOAT)) {
+		dest->type = TYPE_FLOAT;
+		dest->floating = a->floating - b->floating;
+		return 1;
+	} else if (typeCheck(TYPE_FLOAT, TYPE_INT) || typeCheck(TYPE_INT, TYPE_FLOAT)) {
+		dest->floating = toFloat(a) - toFloat(b);
+		dest->type = TYPE_FLOAT;
+		return 1;
 	}
+	
+	return 0;
+}
+
+int _winter_objectMul(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+	if (typeCheck(TYPE_INT, TYPE_INT)) {
+		dest->type = TYPE_INT;
+		dest->integer = a->integer * b->integer;
+		return 1;
+	} else if (typeCheck(TYPE_FLOAT, TYPE_FLOAT)) {
+		dest->type = TYPE_FLOAT;
+		dest->floating = a->floating * b->floating;
+		return 1;
+	} else if (typeCheck(TYPE_FLOAT, TYPE_INT) || typeCheck(TYPE_INT, TYPE_FLOAT)) {
+		dest->floating = toFloat(a) * toFloat(b);
+		dest->type = TYPE_FLOAT;
+		return 1;
+	}
+	
+	return 0;
+}
+
+int _winter_objectDiv(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+	if (typeCheck(TYPE_INT, TYPE_INT)) {
+		dest->type = TYPE_INT;
+		dest->integer = a->integer / b->integer;
+		return 1;
+	} else if (typeCheck(TYPE_FLOAT, TYPE_FLOAT)) {
+		dest->type = TYPE_FLOAT;
+		dest->floating = a->floating / b->floating;
+		return 1;
+	} else if (typeCheck(TYPE_FLOAT, TYPE_INT) || typeCheck(TYPE_INT, TYPE_FLOAT)) {
+		dest->floating = toFloat(a) / toFloat(b);
+		dest->type = TYPE_FLOAT;
+		return 1;
+	}
+	
+	return 0;
+}
+
+int _winter_objectMod(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+	if (typeCheck(TYPE_INT, TYPE_INT)) {
+		dest->type = TYPE_INT;
+		dest->integer = a->integer % b->integer;
+		return 1;
+	} else if (a->type == TYPE_FLOAT || b->type == TYPE_FLOAT) {
+		dest->type = TYPE_FLOAT;
+		dest->floating = 0.0;
+		return 1;
+	}
+	
 	return 0;
 }

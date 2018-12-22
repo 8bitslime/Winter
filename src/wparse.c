@@ -18,49 +18,52 @@
 #define isUnaryToken(t) ((t) == TK_SUB || (t) == TK_NOT || (t) == TK_INC || (t) == TK_DEC)
 #define isOperator(t)   (((t) >= TK_INC && (t) <= TK_NOT) || isUnary(t))
 
-static int precedence(token_type_t operator) {
-	switch(operator) {
-		case TK_NEGATE:
-		case TK_NOT:
-		case TK_PRE_INC:
-		case TK_PRE_DEC:
-			return 4;
-		
-		case TK_MUL:
-		case TK_DIV:
-		case TK_MOD:
-			return 2;
-		
-		case TK_ADD:
-		case TK_SUB:
-			return 1;
-		
-		case TK_EQ:
-		case TK_ASSIGN:
-		case TK_ADD_EQ:
-		case TK_MIN_EQ:
-		case TK_MUL_EQ:
-		case TK_DIV_EQ:
-			return 0;
-		
-		default:
-			return 42;
-	}
-}
+struct operator_info {
+	int precedence;
+	enum {
+		LEFT = 0,
+		RIGHT = 1
+	} associativity;
+	void (*function)(void);
+};
 
-static int associativity(token_type_t operator) {
-	switch (operator) {
-		case TK_ASSIGN:
-		case TK_ADD_EQ:
-		case TK_MIN_EQ:
-		case TK_MUL_EQ:
-		case TK_DIV_EQ:
-			return 0;
-		
-		default:
-			return 1;
-	}
-}
+#define opinfo(p, a, f, t) {(p), (a), (void(*)())(f)}
+static struct operator_info op_table[] = {
+	{0}, // TK_UNKNOWN
+	opinfo(9, RIGHT, NULL, TK_IDENT),
+	opinfo(0, RIGHT, NULL, TK_INC),
+	opinfo(0, RIGHT, NULL, TK_DEC),
+	opinfo(5, RIGHT, NULL, TK_EXP),
+	opinfo(0, LEFT,  NULL, TK_MIN_EQ),
+	opinfo(0, LEFT,  NULL, TK_ADD_EQ),
+	opinfo(0, LEFT,  NULL, TK_MUL_EQ),
+	opinfo(0, LEFT,  NULL, TK_DIV_EQ),
+	opinfo(1, RIGHT, NULL, TK_EQ),
+	opinfo(1, RIGHT, NULL, TK_NEQ),
+	opinfo(2, RIGHT, NULL, TK_LEQ),
+	opinfo(2, RIGHT, NULL, TK_GEQ),
+	opinfo(1, RIGHT, NULL, TK_OR),
+	opinfo(0, RIGHT, NULL, TK_AND),
+	opinfo(6, LEFT,  NULL, TK_DOT),
+	opinfo(0, RIGHT, NULL, TK_ASSIGN),
+	opinfo(2, RIGHT, NULL, TK_LESS),
+	opinfo(2, RIGHT, NULL, TK_GREAT),
+	opinfo(3, RIGHT, _winter_objectAdd, TK_ADD),
+	opinfo(3, RIGHT, _winter_objectSub, TK_SUB),
+	opinfo(4, RIGHT, _winter_objectMul, TK_MUL),
+	opinfo(4, RIGHT, _winter_objectDiv, TK_DIV),
+	opinfo(4, RIGHT, _winter_objectMod, TK_MOD),
+	opinfo(1, RIGHT, NULL, TK_BITOR),
+	opinfo(1, RIGHT, NULL, TK_BITAND),
+	opinfo(1, LEFT,  NULL, TK_NOT),
+	opinfo(9, RIGHT, NULL, TK_VALUE),
+	opinfo(6, RIGHT, NULL, TK_NEGATE),
+	opinfo(6, RIGHT, NULL, TK_PRE_INC),
+	opinfo(6, RIGHT, NULL, TK_PRE_DEC),
+};
+
+#define precedence(t) (op_table[t].precedence)
+#define associativity(t) (op_table[t].associativity)
 
 static ast_node_t *allocNode(winterAllocator_t allocator, size_t numNodes) {
 	//TODO: better allocator
@@ -150,7 +153,7 @@ ast_node_t *_winter_parseExpression(winterAllocator_t allocator, const char *sou
 						top = append = node;
 					} else {
 						ast_node_t *current = top;
-						if (associativity(token.type)) {
+						if (associativity(token.type) == RIGHT) {
 							while (current->nodes[1] != parenthesis &&
 								precedence(current->nodes[1]->type) < precedence(token.type)) {
 								
@@ -193,13 +196,17 @@ static winterInt_t branchToInt(winterState_t *state, ast_node_t *branch) {
 		} break;
 		
 		case TK_IDENT: {
-			winterInt_t ret = _winter_tableToInt(&state->globalState, branch->value.string);
+			winterObject_t *obj = _winter_tableGetObject(&state->globalState, branch->value.string);
+			winterObject_t thing;
+			_winter_objectToInt(&thing, obj);
 			state->allocator(branch->value.string, 0);
-			return ret;
+			return thing.integer;
 		}
 		default: return 0;
 	}
 }
+
+typedef int (*binary_op)(winterObject_t *, const winterObject_t *, const winterObject_t *);
 
 ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 	if (tree && isOperator(tree->type)) {
@@ -210,10 +217,11 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		}
 		switch (tree->type) {
 			case TK_ADD:
-				_winter_objectAdd(&tree->value, &branch1->value, &branch2->value);
-				break;
 			case TK_SUB:
-				_winter_objectSub(&tree->value, &branch1->value, &branch2->value);
+			case TK_MUL:
+			case TK_DIV:
+			case TK_MOD:
+				((binary_op)op_table[tree->type].function)(&tree->value, &branch1->value, &branch2->value);
 				break;
 			case TK_NEGATE:
 				tree->value.integer = -branchToInt(state, branch1);
@@ -229,15 +237,6 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 				} else {
 					tree->value.integer = 0;
 				}
-				break;
-			case TK_MUL:
-				tree->value.integer = branchToInt(state, branch1) * branchToInt(state, branch2);
-				break;
-			case TK_DIV:
-				tree->value.integer = branchToInt(state, branch1) / branchToInt(state, branch2);
-				break;
-			case TK_MOD:
-				tree->value.integer = branchToInt(state, branch1) % branchToInt(state, branch2);
 				break;
 			case TK_EQ:
 				tree->value.integer = branchToInt(state, branch1) == branchToInt(state, branch2);
@@ -302,9 +301,11 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		}
 		state->allocator(branch1, 0);
 		state->allocator(branch2, 0);
+		if (tree->value.type != TYPE_FLOAT) {
+			tree->value.type = TYPE_INT;
+		}
 		tree->type = TK_VALUE;
 		tree->numNodes = 0;
-		
 	}
 	return tree;
 }

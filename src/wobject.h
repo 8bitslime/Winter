@@ -33,5 +33,8 @@ int _winter_objectToInt(winterObject_t *dest, const winterObject_t *a);
 
 int _winter_objectAdd(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
 int _winter_objectSub(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+int _winter_objectMul(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+int _winter_objectDiv(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+int _winter_objectMod(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
 
 #endif

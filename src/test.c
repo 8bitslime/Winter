@@ -38,14 +38,18 @@ int main(int argc, char **argv) {
 				if (ast->type == TK_IDENT) {
 					object = _winter_tableGetObject(&state->globalState, ast->value.string);
 				}
-				switch (object->type) {
-					case TYPE_INT:
-						printf("%i\n", (int)object->integer);
-						break;
-					case TYPE_FLOAT:
-						printf("%f\n", object->floating);
-						break;
-					default: break;
+				if (object == NULL) {
+					printf("ERROR\n");
+				} else {
+					switch (object->type) {
+						case TYPE_INT:
+							printf("%i\n", (int)object->integer);
+							break;
+						case TYPE_FLOAT:
+							printf("%f\n", object->floating);
+							break;
+						default: break;
+					}
 				}
 				allocator(ast, 0);
 			}

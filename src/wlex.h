@@ -19,15 +19,8 @@ typedef enum token_type_t {
 	//Unexpected symbol
 	TK_UNKNOWN = 0,
 	
-	//Keywords
-	TK_FOR, TK_DO, TK_WHILE, TK_BREAK,
-	TK_IF, TK_ELSE, TK_RETURN,
-	
-	//Symbols
-	TK_COMMA, TK_SEMICOLON, TK_COLON,
-	TK_LPAREN, TK_RPAREN,
-	TK_LBRACKET, TK_RBRACKET,
-	TK_LCURLY, TK_RCURLY,
+	//Identifier
+	TK_IDENT,
 	
 	//Operators
 	TK_INC, TK_DEC, TK_EXP,
@@ -39,14 +32,21 @@ typedef enum token_type_t {
 	TK_ADD, TK_SUB, TK_MUL, TK_DIV, TK_MOD,
 	TK_BITOR, TK_BITAND, TK_NOT,
 	
-	//Identifier
-	TK_IDENT,
+	//Tokens for parsing only
+	TK_VALUE, TK_NEGATE, TK_PRE_INC, TK_PRE_DEC,
 	
 	//Literals
 	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR,
 	
-	//Tokens for parsing only
-	TK_VALUE, TK_NEGATE, TK_PRE_INC, TK_PRE_DEC,
+	//Keywords
+	TK_FOR, TK_DO, TK_WHILE, TK_BREAK,
+	TK_IF, TK_ELSE, TK_RETURN,
+	
+	//Symbols
+	TK_COMMA, TK_SEMICOLON, TK_COLON,
+	TK_LPAREN, TK_RPAREN,
+	TK_LBRACKET, TK_RBRACKET,
+	TK_LCURLY, TK_RCURLY,
 	
 	//End of file token
 	TK_EOF
