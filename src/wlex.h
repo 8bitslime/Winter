@@ -22,6 +22,9 @@ typedef enum token_type_t {
 	//Identifier
 	TK_IDENT,
 	
+	//Tokens for parsing only
+	TK_VALUE, TK_NEGATE, TK_PRE_INC, TK_PRE_DEC,
+	
 	//Operators
 	TK_INC, TK_DEC, TK_EXP,
 	TK_MIN_EQ, TK_ADD_EQ, TK_MUL_EQ, TK_DIV_EQ,
@@ -31,9 +34,6 @@ typedef enum token_type_t {
 	TK_DOT, TK_ASSIGN, TK_LESS, TK_GREAT,
 	TK_ADD, TK_SUB, TK_MUL, TK_DIV, TK_MOD,
 	TK_BITOR, TK_BITAND, TK_NOT,
-	
-	//Tokens for parsing only
-	TK_VALUE, TK_NEGATE, TK_PRE_INC, TK_PRE_DEC,
 	
 	//Literals
 	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR,

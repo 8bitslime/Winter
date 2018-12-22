@@ -121,3 +121,67 @@ int _winter_objectMod(winterObject_t *dest, const winterObject_t *a, const winte
 	
 	return 0;
 }
+
+int _winter_objectNegate(winterObject_t *dest, const winterObject_t *a) {
+	if (a->type == TYPE_INT) {
+		dest->type = TYPE_INT;
+		dest->integer = -a->integer;
+		return 1;
+	} else if (a->type == TYPE_FLOAT) {
+		dest->type = TYPE_FLOAT;
+		dest->floating = -a->floating;
+		return 1;
+	}
+	
+	return 0;
+}
+
+int _winter_objectNot(winterObject_t *dest, const winterObject_t *a) {
+	if (a->type == TYPE_INT || a->type == TYPE_FLOAT) {
+		dest->type = TYPE_INT;
+		dest->integer = !a->integer;
+		return 1;
+	}
+	
+	return 0;
+}
+
+int _winter_objectEqual(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+	dest->type = TYPE_INT;
+	dest->integer = a->integer == b->integer;
+	return 1;
+}
+
+int _winter_objectAssign(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	//TODO: garbage collection
+	*dest = *a = *b;
+	return 1;
+}
+
+int _winter_objectPreInc(winterObject_t *dest, winterObject_t *a) {
+	if (a->type == TYPE_INT) {
+		dest->type = TYPE_INT;
+		dest->integer = ++a->integer;
+		return 1;
+	} else if (a->type == TYPE_FLOAT) {
+		dest->type = TYPE_FLOAT;
+		dest->floating = ++a->floating;
+		return 1;
+	}
+	
+	return 0;
+}
+
+int _winter_objectPreDec(winterObject_t *dest, winterObject_t *a) {
+	if (a->type == TYPE_INT) {
+		dest->type = TYPE_INT;
+		dest->integer = --a->integer;
+		return 1;
+	} else if (a->type == TYPE_FLOAT) {
+		dest->type = TYPE_FLOAT;
+		dest->floating = --a->floating;
+		return 1;
+	}
+	
+	return 0;
+}

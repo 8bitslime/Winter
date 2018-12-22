@@ -31,6 +31,10 @@ struct operator_info {
 static struct operator_info op_table[] = {
 	{0}, // TK_UNKNOWN
 	opinfo(9, RIGHT, NULL, TK_IDENT),
+	opinfo(9, RIGHT, NULL, TK_VALUE),
+	opinfo(6, RIGHT, _winter_objectNegate, TK_NEGATE),
+	opinfo(6, RIGHT, _winter_objectPreInc, TK_PRE_INC),
+	opinfo(6, RIGHT, _winter_objectPreDec, TK_PRE_DEC),
 	opinfo(0, RIGHT, NULL, TK_INC),
 	opinfo(0, RIGHT, NULL, TK_DEC),
 	opinfo(5, RIGHT, NULL, TK_EXP),
@@ -38,14 +42,14 @@ static struct operator_info op_table[] = {
 	opinfo(0, LEFT,  NULL, TK_ADD_EQ),
 	opinfo(0, LEFT,  NULL, TK_MUL_EQ),
 	opinfo(0, LEFT,  NULL, TK_DIV_EQ),
-	opinfo(1, RIGHT, NULL, TK_EQ),
+	opinfo(1, RIGHT, _winter_objectEqual, TK_EQ),
 	opinfo(1, RIGHT, NULL, TK_NEQ),
 	opinfo(2, RIGHT, NULL, TK_LEQ),
 	opinfo(2, RIGHT, NULL, TK_GEQ),
 	opinfo(1, RIGHT, NULL, TK_OR),
 	opinfo(0, RIGHT, NULL, TK_AND),
 	opinfo(6, LEFT,  NULL, TK_DOT),
-	opinfo(0, RIGHT, NULL, TK_ASSIGN),
+	opinfo(0, LEFT,  _winter_objectAssign, TK_ASSIGN),
 	opinfo(2, RIGHT, NULL, TK_LESS),
 	opinfo(2, RIGHT, NULL, TK_GREAT),
 	opinfo(3, RIGHT, _winter_objectAdd, TK_ADD),
@@ -55,11 +59,7 @@ static struct operator_info op_table[] = {
 	opinfo(4, RIGHT, _winter_objectMod, TK_MOD),
 	opinfo(1, RIGHT, NULL, TK_BITOR),
 	opinfo(1, RIGHT, NULL, TK_BITAND),
-	opinfo(1, LEFT,  NULL, TK_NOT),
-	opinfo(9, RIGHT, NULL, TK_VALUE),
-	opinfo(6, RIGHT, NULL, TK_NEGATE),
-	opinfo(6, RIGHT, NULL, TK_PRE_INC),
-	opinfo(6, RIGHT, NULL, TK_PRE_DEC),
+	opinfo(6, RIGHT, _winter_objectNot, TK_NOT),
 };
 
 #define precedence(t) (op_table[t].precedence)
@@ -187,26 +187,8 @@ ast_node_t *generateTreeThing(winterState_t *state, const char *source) {
 	return _winter_parseStatement(state->allocator, source, &string);
 }
 
-static winterInt_t branchToInt(winterState_t *state, ast_node_t *branch) {
-	switch (branch->type) {
-		case TK_VALUE: {
-			winterObject_t thing;
-			_winter_objectToInt(&thing, &branch->value);
-			return thing.integer;
-		} break;
-		
-		case TK_IDENT: {
-			winterObject_t *obj = _winter_tableGetObject(&state->globalState, branch->value.string);
-			winterObject_t thing;
-			_winter_objectToInt(&thing, obj);
-			state->allocator(branch->value.string, 0);
-			return thing.integer;
-		}
-		default: return 0;
-	}
-}
-
-typedef int (*binary_op)(winterObject_t *, const winterObject_t *, const winterObject_t *);
+typedef int (*binary_op)(winterObject_t *, winterObject_t *, winterObject_t *);
+typedef int (*unary_op)(winterObject_t *, winterObject_t *);
 
 ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 	if (tree && isOperator(tree->type)) {
@@ -215,95 +197,29 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		if (tree->numNodes > 1) {
 			branch2 = execute(state, tree->nodes[1]);
 		}
-		switch (tree->type) {
-			case TK_ADD:
-			case TK_SUB:
-			case TK_MUL:
-			case TK_DIV:
-			case TK_MOD:
-				((binary_op)op_table[tree->type].function)(&tree->value, &branch1->value, &branch2->value);
-				break;
-			case TK_NEGATE:
-				tree->value.integer = -branchToInt(state, branch1);
-				break;
-			case TK_NOT:
-				tree->value.integer = !branchToInt(state, branch1);
-				break;
-			case TK_PRE_INC:
-				if (branch1->type == TK_IDENT) {
-					winterInt_t integer = tree->value.integer = _winter_tableToInt(&state->globalState, branch1->value.string) + 1;
-					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, integer);
-					state->allocator(branch1->value.string, 0);
-				} else {
-					tree->value.integer = 0;
-				}
-				break;
-			case TK_EQ:
-				tree->value.integer = branchToInt(state, branch1) == branchToInt(state, branch2);
-				break;
-			case TK_ADD_EQ:
-				if (branch1->type == TK_IDENT) {
-					winterInt_t integer = _winter_tableToInt(&state->globalState, branch1->value.string) + branchToInt(state, branch2);
-					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, integer);
-					tree->value.integer = integer;
-					state->allocator(branch1->value.string, 0);
-				} else {
-					tree->value.integer = 0;
-				}
-				break;
-			case TK_MIN_EQ:
-				if (branch1->type == TK_IDENT) {
-					winterInt_t integer = _winter_tableToInt(&state->globalState, branch1->value.string) - branchToInt(state, branch2);
-					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, integer);
-					tree->value.integer = integer;
-					state->allocator(branch1->value.string, 0);
-				} else {
-					tree->value.integer = 0;
-				}
-				break;
-			case TK_MUL_EQ:
-				if (branch1->type == TK_IDENT) {
-					winterInt_t integer = _winter_tableToInt(&state->globalState, branch1->value.string) * branchToInt(state, branch2);
-					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, integer);
-					tree->value.integer = integer;
-					state->allocator(branch1->value.string, 0);
-				} else {
-					tree->value.integer = 0;
-				}
-				break;
-			case TK_DIV_EQ:
-				if (branch1->type == TK_IDENT) {
-					winterInt_t integer = _winter_tableToInt(&state->globalState, branch1->value.string) / branchToInt(state, branch2);
-					_winter_tableInsertInt(state->allocator, &state->globalState, branch1->value.string, integer);
-					tree->value.integer = integer;
-					state->allocator(branch1->value.string, 0);
-				} else {
-					tree->value.integer = 0;
-				}
-				break;
-			case TK_ASSIGN:
-				if (branch1->type == TK_IDENT) {
-					winterObject_t *object;
-					if (branch2->type == TK_IDENT) {
-						object = _winter_tableGetObject(&state->globalState, branch2->value.string);
-						state->allocator(branch2->value.string, 0);
-					} else {
-						object = &branch2->value;
-					}
-					_winter_tableInsert(state->allocator, &state->globalState, branch1->value.string, object);
-					tree->value = *object;
-					state->allocator(branch1->value.string, 0);
-				} else {
-					tree->value.integer = 0;
-				}
-				break;
-			default: break;
+		
+		winterObject_t *b, *a = &branch1->value;
+		if (branch1->type == TK_IDENT) {
+			a = _winter_tableGetObject(&state->globalState, branch1->value.string);
 		}
+		if (branch2 != NULL) {
+			b = &branch2->value;
+			if (branch2->type == TK_IDENT) {
+				_winter_tableGetObject(&state->globalState, branch2->value.string);			
+			}
+		}
+		
+		if (tree->type == TK_ASSIGN && a == NULL) {
+			_winter_tableInsert(state->allocator, &state->globalState, branch1->value.string, b);
+			tree->value = *b;
+		} else if (isUnary(tree->type)) {
+			((unary_op)op_table[tree->type].function)(&tree->value, a);
+		} else {
+			((binary_op)op_table[tree->type].function)(&tree->value, a, b);
+		}
+		
 		state->allocator(branch1, 0);
 		state->allocator(branch2, 0);
-		if (tree->value.type != TYPE_FLOAT) {
-			tree->value.type = TYPE_INT;
-		}
 		tree->type = TK_VALUE;
 		tree->numNodes = 0;
 	}

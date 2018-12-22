@@ -48,6 +48,8 @@ int main(int argc, char **argv) {
 						case TYPE_FLOAT:
 							printf("%f\n", object->floating);
 							break;
+						case TYPE_STRING:
+							printf("\"%s\"\n", object->string);
 						default: break;
 					}
 				}
