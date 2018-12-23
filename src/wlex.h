@@ -11,6 +11,7 @@
 #define WINLEX_H
 
 #include "winter.h"
+#include "wstate.h"
 #include "wtable.h"
 #include "wobject.h"
 
@@ -58,6 +59,6 @@ typedef struct token_t {
 	//TODO: debug info
 } token_t;
 
-size_t _winter_nextToken(winterAllocator_t allocator, const char *source, char **endPtr, token_t *token);
+size_t _winter_nextToken(winterState_t *state, const char *source, char **endPtr, token_t *token);
 
 #endif

@@ -16,10 +16,11 @@ winterState_t *winterCreateState(winterAllocator_t allocator) {
 		return NULL;
 	}
 	ret->allocator = allocator;
-	_winter_tableAlloc(allocator, &ret->globalState, 25);
+	_winter_tableAlloc(ret, &ret->globalState, 25);
 	return ret;
 }
 
 void winterFreeState(winterState_t *state) {
-	state->allocator(state, 0);
+	//TODO: free global table
+	FREE(state);
 }

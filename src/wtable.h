@@ -23,11 +23,11 @@ typedef struct winterTable_t {
 	size_t size;
 } winterTable_t;
 
-void _winter_tableAlloc(winterAllocator_t allocator, winterTable_t *table, size_t initial);
+void _winter_tableAlloc(winterState_t *state, winterTable_t *table, size_t initial);
 
-void _winter_tableInsert(winterAllocator_t allocator, winterTable_t *table, const char *name, const winterObject_t *object);
-void _winter_tableInsertInt(winterAllocator_t allocator, winterTable_t *table, const char *name, winterInt_t value);
-void _winter_tableInsertFloat(winterAllocator_t allocator, winterTable_t *table, const char *name, winterFloat_t value);
+void _winter_tableInsert(winterState_t *state, winterTable_t *table, const char *name, const winterObject_t *object);
+void _winter_tableInsertInt(winterState_t *state, winterTable_t *table, const char *name, winterInt_t value);
+void _winter_tableInsertFloat(winterState_t *state, winterTable_t *table, const char *name, winterFloat_t value);
 
 winterObject_t *_winter_tableGetObject(winterTable_t *table, const char *name);
 winterInt_t _winter_tableToInt(winterTable_t *table, const char *name);

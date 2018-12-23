@@ -11,7 +11,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 
 #define isExpression(t) ((t) == TK_IDENT || (t) == TK_VALUE || (t) == TK_LPAREN)
 #define isUnary(t)      ((t) == TK_NOT || (t) == TK_NEGATE || (t) == TK_PRE_INC || (t) == TK_PRE_DEC)
@@ -65,31 +64,31 @@ static struct operator_info op_table[] = {
 #define precedence(t) (op_table[t].precedence)
 #define associativity(t) (op_table[t].associativity)
 
-static ast_node_t *allocNode(winterAllocator_t allocator, size_t numNodes) {
+static ast_node_t *allocNode(winterState_t *state, size_t numNodes) {
 	//TODO: better allocator
-	ast_node_t *ret = allocator(NULL, sizeof(ast_node_t) + sizeof(ast_node_t*) * numNodes);
+	ast_node_t *ret = MALLOC(sizeof(ast_node_t) + sizeof(ast_node_t*) * numNodes);
 	ret->numNodes = numNodes;
 	ret->nodes = (ast_node_t**)(ret + 1);
 	return ret;
 }
 
-static ast_node_t *createNode(winterAllocator_t allocator, const token_t *token) {
+static ast_node_t *createNode(winterState_t *state, const token_t *token) {
 	ast_node_t *ret = NULL;
 	
 	if (isExpression(token->type)) {
-		ret = allocNode(allocator, 0);
+		ret = allocNode(state, 0);
 		ret->value = token->value;
 	} else if (isUnary(token->type)) {
-		ret = allocNode(allocator, 1);
+		ret = allocNode(state, 1);
 	} else if (isOperator(token->type)) {
-		ret = allocNode(allocator, 2);
+		ret = allocNode(state, 2);
 	} 
 	
 	ret->type = token->type;
 	return ret;
 }
 
-ast_node_t *_winter_parseExpression(winterAllocator_t allocator, const char *source, char **endPtr) {
+ast_node_t *_winter_parseExpression(winterState_t *state, const char *source, char **endPtr) {
 	char *string = (char*)source;
 	ast_node_t *top, *append = NULL, *parenthesis = NULL;
 	token_t token = {0};
@@ -100,7 +99,7 @@ ast_node_t *_winter_parseExpression(winterAllocator_t allocator, const char *sou
 	} expect = expression;
 	
 	while (token.type != TK_EOF) {
-		size_t forward = _winter_nextToken(allocator, string, &string, &token);
+		size_t forward = _winter_nextToken(state, string, &string, &token);
 		
 		switch (expect) {
 			case expression: {
@@ -108,14 +107,14 @@ ast_node_t *_winter_parseExpression(winterAllocator_t allocator, const char *sou
 					ast_node_t *node;
 					
 					if (token.type == TK_LPAREN) {
-						node = parenthesis = _winter_parseExpression(allocator, string, &string);
-						_winter_nextToken(allocator, string, &string, &token);
+						node = parenthesis = _winter_parseExpression(state, string, &string);
+						_winter_nextToken(state, string, &string, &token);
 						
 						if (token.type != TK_RPAREN) {
 							return NULL;
 						}
 					} else {
-						node = createNode(allocator, &token);
+						node = createNode(state, &token);
 					}
 					
 					if (append) {
@@ -132,7 +131,7 @@ ast_node_t *_winter_parseExpression(winterAllocator_t allocator, const char *sou
 						case TK_DEC: token.type = TK_PRE_DEC; break;
 						default: break;
 					}
-					ast_node_t *node = createNode(allocator, &token);
+					ast_node_t *node = createNode(state, &token);
 					if (append) {
 						append->nodes[append->numNodes - 1] = node;
 						append = node;
@@ -146,7 +145,7 @@ ast_node_t *_winter_parseExpression(winterAllocator_t allocator, const char *sou
 			
 			case operator: {
 				if (isOperator(token.type)) {
-					ast_node_t *node = createNode(allocator, &token);
+					ast_node_t *node = createNode(state, &token);
 					
 					if (top == parenthesis || (associativity(top->type) && precedence(top->type) >= precedence(token.type))) {
 						node->nodes[0] = top;
@@ -178,13 +177,13 @@ ast_node_t *_winter_parseExpression(winterAllocator_t allocator, const char *sou
 	return top;
 }
 
-ast_node_t *_winter_parseStatement(winterAllocator_t allocator, const char *source, char **endPtr) {
-	return _winter_parseExpression(allocator, source, endPtr);
+ast_node_t *_winter_parseStatement(winterState_t *state, const char *source, char **endPtr) {
+	return _winter_parseExpression(state, source, endPtr);
 }
 
 ast_node_t *generateTreeThing(winterState_t *state, const char *source) {
 	char *string;
-	return _winter_parseStatement(state->allocator, source, &string);
+	return _winter_parseStatement(state, source, &string);
 }
 
 typedef int (*binary_op)(winterObject_t *, winterObject_t *, winterObject_t *);
@@ -210,7 +209,7 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		}
 		
 		if (tree->type == TK_ASSIGN && a == NULL) {
-			_winter_tableInsert(state->allocator, &state->globalState, branch1->value.string, b);
+			_winter_tableInsert(state, &state->globalState, branch1->value.string, b);
 			tree->value = *b;
 		} else if (isUnary(tree->type)) {
 			((unary_op)op_table[tree->type].function)(&tree->value, a);
@@ -218,8 +217,8 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 			((binary_op)op_table[tree->type].function)(&tree->value, a, b);
 		}
 		
-		state->allocator(branch1, 0);
-		state->allocator(branch2, 0);
+		FREE(branch1);
+		FREE(branch2);
 		tree->type = TK_VALUE;
 		tree->numNodes = 0;
 	}

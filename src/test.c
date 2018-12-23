@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 				} else {
 					switch (object->type) {
 						case TYPE_INT:
-							printf("%i\n", (int)object->integer);
+							printf("%I64i\n", object->integer);
 							break;
 						case TYPE_FLOAT:
 							printf("%f\n", object->floating);
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
 						default: break;
 					}
 				}
-				allocator(ast, 0);
+				FREE(ast);
 			}
 		}
 		

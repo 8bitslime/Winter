@@ -17,4 +17,9 @@ typedef struct winterState_t {
 	winterTable_t globalState;
 } winterState_t;
 
+//Ease of use macros
+#define MALLOC(size)       (state->allocator(NULL, size))
+#define REALLOC(ptr, size) (state->allocator(ptr, size))
+#define FREE(ptr)          (state->allocator(ptr, 0))
+
 #endif

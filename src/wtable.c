@@ -7,6 +7,7 @@
 */
 
 #include "wtable.h"
+#include "wstate.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -23,10 +24,10 @@ static unsigned long hashString(const char *string) {
 	return out;
 }
 
-void _winter_tableAlloc(winterAllocator_t allocator, winterTable_t *table, size_t initial) {
-	table->buckets = allocator(NULL, sizeof(bucket_t) * initial);
-	memset(table->buckets, 0, sizeof(bucket_t) * initial);
+void _winter_tableAlloc(winterState_t *state, winterTable_t *table, size_t initial) {
+	table->buckets = MALLOC(sizeof(bucket_t) * initial);
 	assert(table->buckets != NULL);
+	memset(table->buckets, 0, sizeof(bucket_t) * initial);
 	
 	table->numBuckets = initial;
 	table->size = 0;
@@ -48,22 +49,22 @@ static bucket_t *getBucket(winterTable_t *table, const char *name) {
 	return slot;
 }
 
-void _winter_tableInsert(winterAllocator_t allocator, winterTable_t *table, const char *name, const winterObject_t *value) {
+void _winter_tableInsert(winterState_t *state, winterTable_t *table, const char *name, const winterObject_t *value) {
 	bucket_t *bucket = getBucket(table, name);
 	if (bucket != NULL) {
 		if (bucket->name == NULL) {
-			bucket->name = allocator(NULL, strlen(name) + 1);
+			bucket->name = MALLOC(strlen(name) + 1);
 			strcpy(bucket->name, name);
 			table->size++;
 		}
 		bucket->object = *value;
 	}
 }
-void _winter_tableInsertInt(winterAllocator_t allocator, winterTable_t *table, const char *name, winterInt_t value) {
+void _winter_tableInsertInt(winterState_t *state, winterTable_t *table, const char *name, winterInt_t value) {
 	bucket_t *bucket = getBucket(table, name);
 	if (bucket != NULL) {
 		if (bucket->name == NULL) {
-			bucket->name = allocator(NULL, strlen(name) + 1);
+			bucket->name = MALLOC(strlen(name) + 1);
 			strcpy(bucket->name, name);
 			table->size++;
 		}
@@ -71,11 +72,11 @@ void _winter_tableInsertInt(winterAllocator_t allocator, winterTable_t *table, c
 		bucket->object.integer = value;
 	}
 }
-void _winter_tableInsertFloat(winterAllocator_t allocator, winterTable_t *table, const char *name, winterFloat_t value) {
+void _winter_tableInsertFloat(winterState_t *state, winterTable_t *table, const char *name, winterFloat_t value) {
 	bucket_t *bucket = getBucket(table, name);
 	if (bucket != NULL) {
 		if (bucket->name == NULL) {
-			bucket->name = allocator(NULL, strlen(name) + 1);
+			bucket->name = MALLOC(strlen(name) + 1);
 			strcpy(bucket->name, name);
 			table->size++;
 		}
