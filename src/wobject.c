@@ -7,6 +7,7 @@
 */
 
 #include "wobject.h"
+#include "math.h"
 
 #define typeCheck(ta, tb) (a->type == (ta) && b->type == (tb))
 
@@ -116,6 +117,20 @@ int _winter_objectMod(winterObject_t *dest, const winterObject_t *a, const winte
 	} else if (a->type == TYPE_FLOAT || b->type == TYPE_FLOAT) {
 		dest->type = TYPE_FLOAT;
 		dest->floating = 0.0;
+		return 1;
+	}
+	
+	return 0;
+}
+
+int _winter_objectPow(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+	if (typeCheck(TYPE_INT, TYPE_INT)) {
+		dest->type = TYPE_INT;
+		dest->integer = (winterInt_t)(pow(toFloat(a), toFloat(b)) + 0.5);
+		return 1;
+	} else if (a->type == TYPE_FLOAT || b->type == TYPE_FLOAT) {
+		dest->type = TYPE_FLOAT;
+		dest->floating = pow(toFloat(a), toFloat(b));
 		return 1;
 	}
 	

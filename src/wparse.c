@@ -36,7 +36,7 @@ static struct operator_info op_table[] = {
 	opinfo(6, RIGHT, _winter_objectPreDec, TK_PRE_DEC),
 	opinfo(0, RIGHT, NULL, TK_INC),
 	opinfo(0, RIGHT, NULL, TK_DEC),
-	opinfo(5, RIGHT, NULL, TK_EXP),
+	opinfo(5, RIGHT, _winter_objectPow, TK_EXP),
 	opinfo(0, LEFT,  NULL, TK_MIN_EQ),
 	opinfo(0, LEFT,  NULL, TK_ADD_EQ),
 	opinfo(0, LEFT,  NULL, TK_MUL_EQ),
@@ -204,7 +204,7 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		if (branch2 != NULL) {
 			b = &branch2->value;
 			if (branch2->type == TK_IDENT) {
-				_winter_tableGetObject(&state->globalState, branch2->value.string);			
+				b = _winter_tableGetObject(&state->globalState, branch2->value.string);			
 			}
 		}
 		
