@@ -10,6 +10,7 @@
 #define WOBJECT_H
 
 #include "winter.h"
+#include "wtype.h"
 
 typedef enum object_type_t {
 	TYPE_NULL = 0,
@@ -29,19 +30,19 @@ typedef struct winterObject_t {
 //Returns zero if a and b are incompatible objects
 //Result stored in dest
 //All paramters are allowed to point to the same object
-int _winter_objectToInt(winterObject_t *dest, const winterObject_t *a);
+bool_t _winter_objectToInt(winterObject_t *dest, const winterObject_t *a);
 
-int _winter_objectAdd(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
-int _winter_objectSub(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
-int _winter_objectMul(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
-int _winter_objectDiv(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
-int _winter_objectMod(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
-int _winter_objectPow(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
-int _winter_objectEqual(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
-int _winter_objectAssign(winterObject_t *dest, winterObject_t *a, const winterObject_t *b);
-int _winter_objectPreInc(winterObject_t *dest, winterObject_t *a);
-int _winter_objectPreDec(winterObject_t *dest, winterObject_t *a);
-int _winter_objectNegate(winterObject_t *dest, const winterObject_t *a);
-int _winter_objectNot(winterObject_t *dest, const winterObject_t *a);
+bool_t _winter_objectAdd(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectSub(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectMul(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectDiv(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectMod(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectPow(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectEqual(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectAssign(winterObject_t *dest, winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectPreInc(winterObject_t *dest, winterObject_t *a);
+bool_t _winter_objectPreDec(winterObject_t *dest, winterObject_t *a);
+bool_t _winter_objectNegate(winterObject_t *dest, const winterObject_t *a);
+bool_t _winter_objectNot(winterObject_t *dest, const winterObject_t *a);
 
 #endif

@@ -101,6 +101,8 @@ ast_node_t *_winter_parseExpression(winterState_t *state, lexState_t *lex) {
 		_winter_nextToken(state, lex);
 		token = lex->current;
 		
+		printf("current token type: %i, character: %i\n", token.type, (int)lex->cur);
+		
 		switch (expect) {
 			case expression: {
 				if (isExpression(token.type)) {

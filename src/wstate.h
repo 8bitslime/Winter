@@ -10,6 +10,7 @@
 #define WSTATE_H
 
 #include "winter.h"
+#include "wtype.h"
 #include "wtable.h"
 
 typedef struct winterState_t {

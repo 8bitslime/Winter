@@ -42,27 +42,30 @@ static void skipWhitespaces(lexState_t *lex) {
 }
 
 //Returns non-zero if the immediate token is a comment
-static int skipComments(lexState_t *lex) {
+static bool_t skipComments(lexState_t *lex) {
 	if (*cursor == '/') {
 		switch (*(cursor + 1)) {
 			case '/':
 				lex->cur++;
 				while (*cursor && *cursor != '\n') lex->cur++;
 				lex->line++;
-				return 1;
+				return true;
 			
 			case '*':
 				lex->cur++;
-				while (*cursor && strncmp(cursor, "*/", 2) != 0) {
+				while (*cursor && !(cursor[0] == '*' && cursor[1] == '/')) {
 					if (*cursor == '\n') {
 						lex->line++;
 					}
 					lex->cur++;
 				}
-				return 1;
+				if (*cursor) {
+					lex->cur += 2;
+				}
+				return true;
 		}
 	}
-	return 0;
+	return false;
 }
 
 //Returns non-zero if the immediate token is a keyword
