@@ -26,7 +26,7 @@ struct operator_info {
 	void (*function)(void);
 };
 
-#define opinfo(p, a, f, t) {(p), (a), (void(*)())(f)}
+#define opinfo(p, a, f, t) {(p), (a), (void(*)(void))(f)}
 static struct operator_info op_table[] = {
 	{0}, // TK_UNKNOWN
 	opinfo(9, RIGHT, NULL, TK_IDENT),
@@ -88,8 +88,7 @@ static ast_node_t *createNode(winterState_t *state, const token_t *token) {
 	return ret;
 }
 
-ast_node_t *_winter_parseExpression(winterState_t *state, const char *source, char **endPtr) {
-	char *string = (char*)source;
+ast_node_t *_winter_parseExpression(winterState_t *state, lexState_t *lex) {
 	ast_node_t *top, *append = NULL, *parenthesis = NULL;
 	token_t token = {0};
 	
@@ -99,7 +98,8 @@ ast_node_t *_winter_parseExpression(winterState_t *state, const char *source, ch
 	} expect = expression;
 	
 	while (token.type != TK_EOF) {
-		size_t forward = _winter_nextToken(state, string, &string, &token);
+		_winter_nextToken(state, lex);
+		token = lex->current;
 		
 		switch (expect) {
 			case expression: {
@@ -107,10 +107,8 @@ ast_node_t *_winter_parseExpression(winterState_t *state, const char *source, ch
 					ast_node_t *node;
 					
 					if (token.type == TK_LPAREN) {
-						node = parenthesis = _winter_parseExpression(state, string, &string);
-						_winter_nextToken(state, string, &string, &token);
-						
-						if (token.type != TK_RPAREN) {
+						node = parenthesis = _winter_parseExpression(state, lex);
+						if (lex->current.type != TK_RPAREN) {
 							return NULL;
 						}
 					} else {
@@ -168,7 +166,6 @@ ast_node_t *_winter_parseExpression(winterState_t *state, const char *source, ch
 					
 					expect = expression;
 				} else {
-					*endPtr = string - forward;
 					return top;
 				}
 			} break;
@@ -177,13 +174,21 @@ ast_node_t *_winter_parseExpression(winterState_t *state, const char *source, ch
 	return top;
 }
 
-ast_node_t *_winter_parseStatement(winterState_t *state, const char *source, char **endPtr) {
-	return _winter_parseExpression(state, source, endPtr);
+ast_node_t *_winter_parseStatement(winterState_t *state, lexState_t *lex) {
+	ast_node_t *expr = _winter_parseExpression(state, lex);
+	return expr;
+	// _winter_nextToken(state, lex);
+	// if (lex->current.type == TK_SEMICOLON) {
+	// 	return expr;
+	// } else {
+	// 	return NULL;
+	// }
 }
 
 ast_node_t *generateTreeThing(winterState_t *state, const char *source) {
-	char *string;
-	return _winter_parseStatement(state, source, &string);
+	lexState_t lex;
+	_winter_lexStateInit(&lex, source);
+	return _winter_parseStatement(state, &lex);
 }
 
 typedef int (*binary_op)(winterObject_t *, winterObject_t *, winterObject_t *);

@@ -59,6 +59,15 @@ typedef struct token_t {
 	//TODO: debug info
 } token_t;
 
-size_t _winter_nextToken(winterState_t *state, const char *source, char **endPtr, token_t *token);
+typedef struct lexState_t {
+	const char *source;
+	size_t cur;  //cursor
+	size_t line; //current line number
+	token_t current; //most recent token
+	//token_t lookahead
+} lexState_t;
+
+void _winter_lexStateInit(lexState_t *lexState, const char *source);
+size_t _winter_nextToken(winterState_t *state, lexState_t *lexState);
 
 #endif

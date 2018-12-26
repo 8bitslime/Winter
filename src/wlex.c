@@ -18,6 +18,8 @@
 #define isAlNumUnder(c) (isalnum(c) || (c) == '_')
 #define isHex(c) (isdigit(c) || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F'))
 
+#define cursor (lex->source + lex->cur)
+
 static const char *keywords[] = {
 	"for", "do", "while", "break", "if", "else", "return"
 };
@@ -26,26 +28,38 @@ static const char *operators[] = {
 	//all multicharacter operators
 	"++", "--", "**", "-=", "+=", "*=", "/=", "==", "!=", "<=", ">=", "||", "&&",
 };	
-static const char* single_operators = ".=<>+-*/%|&!";
+static const char *single_operators = ".=<>+-*/%|&!";
 static const char *symbols = ",;:()[]{}";
 
 //Advances the source pointer forward past whitespaces
-static void skipWhitespaces(const char **source) {
-	while(isspace(**source)) (*source)++;
+static void skipWhitespaces(lexState_t *lex) {
+	while(isspace(*cursor)) {
+		if (*cursor == '\n') {
+			lex->line++;
+		}
+		lex->cur++;
+	}
 }
 
 //Returns non-zero if the immediate token is a comment
-static size_t skipComments(const char *source) {
-	if (source[0] == '/') {
-		size_t i = 2;
-		switch (source[1]) {
+static int skipComments(lexState_t *lex) {
+	if (*cursor == '/') {
+		switch (*(cursor + 1)) {
 			case '/':
-				while (source[i] && source[i] != '\n') i++;
-				return i;
+				lex->cur++;
+				while (*cursor && *cursor != '\n') lex->cur++;
+				lex->line++;
+				return 1;
 			
 			case '*':
-				while (source[i] && strncmp(source + i, "*/", 2) != 0) i++;
-				return source[i] ? i + 2 : i;
+				lex->cur++;
+				while (*cursor && strncmp(cursor, "*/", 2) != 0) {
+					if (*cursor == '\n') {
+						lex->line++;
+					}
+					lex->cur++;
+				}
+				return 1;
 		}
 	}
 	return 0;
@@ -226,104 +240,103 @@ static size_t decodeEscape(const char *source, winterInt_t *character) {
 	return 0;
 }
 
-size_t _winter_nextToken(winterState_t *state, const char *source, char **endPtr, token_t *token) {
-	size_t ret = 0;
+size_t _winter_nextToken(winterState_t *state, lexState_t *lex) {
+	size_t size = 0;
 	token_type_t type;
 	
-	int comment;
 	do {
-		skipWhitespaces(&source);
-		comment = skipComments(source);
-		source += comment;
-	} while(comment);
+		skipWhitespaces(lex);
+	} while(skipComments(lex));
 	
-	if (*source) {
-		if (isAlphaUnder(*source)) {
-			if ((ret = isKeyword(source, &type))) goto end;
-			if ((ret = isIdentifier(source))) {
+	if (*cursor) {
+		if (isAlphaUnder(*cursor)) {
+			if ((size = isKeyword(cursor, &type))) goto end;
+			if ((size = isIdentifier(cursor))) {
 				type = TK_IDENT;
 				goto end;
 			}
 		} else {
-			if ((ret = isNumber(source, &type))) goto end;
-			if ((ret = isSymbol(source, &type))) goto end;
-			if ((ret = isOperator(source, &type))) goto end;
-			if ((ret = isString(source))) {
+			if ((size = isNumber(cursor, &type))) goto end;
+			if ((size = isSymbol(cursor, &type))) goto end;
+			if ((size = isOperator(cursor, &type))) goto end;
+			if ((size = isString(cursor))) {
 				type = TK_STRING;
 				goto end;
 			}
-			if ((ret = isCharacter(source))) {
+			if ((size = isCharacter(lex->source + lex->cur))) {
 				type = TK_CHAR;
 				goto end;
 			}
 		}
 		
 		type = TK_UNKNOWN;
-		ret = 1;
+		size = 1;
 	} else {
 		type = TK_EOF;
-		ret = 0;
+		size = 0;
 	}
 	
 	end:
-	// if (ret) {
-		if (ret && endPtr) {
-			*endPtr = (char*)(source + ret);
-		}
+	lex->current.type = type;
+	switch (type) {
+		case TK_INT: {
+			lex->current.type = TK_VALUE;
+			lex->current.value.type = TYPE_INT;
+			lex->current.value.integer = (winterInt_t)strtoll(cursor, NULL, 0);
+		} break;
 		
-		token->type = type;
-		switch (type) {
-			case TK_INT: {
-				token->type = TK_VALUE;
-				token->value.type = TYPE_INT;
-				token->value.integer = (winterInt_t)strtoll(source, NULL, 0);
-			} break;
+		case TK_FLOAT: {
+			lex->current.type = TK_VALUE;
+			lex->current.value.type = TYPE_FLOAT;
+			lex->current.value.floating = (winterFloat_t)strtod(cursor, NULL);
+		} break;
+		
+		case TK_IDENT: {
+			lex->current.value.string = MALLOC(size + 1);
+			memcpy(lex->current.value.string, cursor, size);
+			lex->current.value.string[size] = '\0';
+		} break;
+		
+		case TK_STRING: {
+			//TODO: create string object
+			char *string = (char*)cursor;
+			lex->current.value.string = MALLOC(size - 1);
+			string++;
 			
-			case TK_FLOAT: {
-				token->type = TK_VALUE;
-				token->value.type = TYPE_FLOAT;
-				token->value.floating = (winterFloat_t)strtod(source, NULL);
-			} break;
-			
-			case TK_IDENT: {
-				token->value.string = MALLOC(ret + 1);
-				memcpy(token->value.string, source, ret);
-				token->value.string[ret] = '\0';
-			} break;
-			
-			case TK_STRING: {
-				token->value.string = MALLOC(ret - 1);
-				source++;
-				
-				size_t i = 0;
-				while (*source != '"') {
-					if (*source == '\\') {
-						winterInt_t character;
-						source += decodeEscape(source, &character);
-						token->value.string[i++] = character;
-					} else {
-						token->value.string[i++] = *source;
-						source++;
-					}
-				}
-				
-				token->type = TK_VALUE;
-				token->value.type = TYPE_STRING;
-				token->value.string[i] = '\0';
-			} break;
-			
-			case TK_CHAR: {
-				token->type = TK_VALUE;
-				token->value.type = TYPE_INT;
-				if (source[1] == '\\') {
-					decodeEscape(source + 1, &token->value.integer);
+			size_t i = 0;
+			while (*string != '"') {
+				if (*string == '\\') {
+					winterInt_t character;
+					string += decodeEscape(string, &character);
+					lex->current.value.string[i++] = character;
 				} else {
-					token->value.integer = (winterInt_t)source[1];
+					lex->current.value.string[i++] = *string;
+					string++;
 				}
-			} break;
+			}
 			
-			default: break;
-		}
-	// }
-	return ret;
+			lex->current.type = TK_VALUE;
+			lex->current.value.type = TYPE_STRING;
+			lex->current.value.string[i] = '\0';
+		} break;
+		
+		case TK_CHAR: {
+			lex->current.type = TK_VALUE;
+			lex->current.value.type = TYPE_INT;
+			if (cursor[1] == '\\') {
+				decodeEscape(cursor + 1, &lex->current.value.integer);
+			} else {
+				lex->current.value.integer = (winterInt_t)cursor[1];
+			}
+		} break;
+		
+		default: break;
+	}
+	lex->cur += size;
+	return size;
+}
+
+void _winter_lexStateInit(lexState_t *lex, const char *source) {
+	*lex = (lexState_t){0};
+	lex->source = source;
 }
