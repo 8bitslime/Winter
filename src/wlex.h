@@ -41,7 +41,9 @@ typedef enum token_type_t {
 	
 	//Keywords
 	TK_FOR, TK_DO, TK_WHILE, TK_BREAK,
-	TK_IF, TK_ELSE, TK_RETURN,
+	TK_IF, TK_ELSE, TK_RETURN, TK_VAR,
+	
+	TK_STATEMENT,
 	
 	//Symbols
 	TK_COMMA, TK_SEMICOLON, TK_COLON,
@@ -61,13 +63,12 @@ typedef struct token_t {
 
 typedef struct lexState_t {
 	const char *source;
-	size_t cur;  //cursor
-	size_t line; //current line number
-	token_t current; //most recent token
-	//token_t lookahead
+	size_t cur;        //cursor
+	size_t line;       //current line number
+	token_t current;   //current token
+	token_t lookahead; //next token in line
 } lexState_t;
 
-void _winter_lexStateInit(lexState_t *lexState, const char *source);
 size_t _winter_nextToken(winterState_t *state, lexState_t *lexState);
 
 #endif

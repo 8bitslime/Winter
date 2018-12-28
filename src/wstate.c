@@ -21,6 +21,6 @@ winterState_t *winterCreateState(winterAllocator_t allocator) {
 }
 
 void winterFreeState(winterState_t *state) {
-	//TODO: free global table
+	_winter_tableFree(state, &state->globalState);
 	FREE(state);
 }

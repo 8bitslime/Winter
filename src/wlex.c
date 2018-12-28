@@ -21,7 +21,7 @@
 #define cursor (lex->source + lex->cur)
 
 static const char *keywords[] = {
-	"for", "do", "while", "break", "if", "else", "return"
+	"for", "do", "while", "break", "if", "else", "return", "var"
 };
 
 static const char *operators[] = {
@@ -246,12 +246,13 @@ static size_t decodeEscape(const char *source, winterInt_t *character) {
 size_t _winter_nextToken(winterState_t *state, lexState_t *lex) {
 	size_t size = 0;
 	token_type_t type;
-	
-	do {
-		skipWhitespaces(lex);
-	} while(skipComments(lex));
+	lex->current = lex->lookahead;
 	
 	if (*cursor) {
+		do {
+			skipWhitespaces(lex);
+		} while(skipComments(lex));
+		
 		if (isAlphaUnder(*cursor)) {
 			if ((size = isKeyword(cursor, &type))) goto end;
 			if ((size = isIdentifier(cursor))) {
@@ -280,30 +281,30 @@ size_t _winter_nextToken(winterState_t *state, lexState_t *lex) {
 	}
 	
 	end:
-	lex->current.type = type;
+	lex->lookahead.type = type;
 	switch (type) {
 		case TK_INT: {
-			lex->current.type = TK_VALUE;
-			lex->current.value.type = TYPE_INT;
-			lex->current.value.integer = (winterInt_t)strtoll(cursor, NULL, 0);
+			lex->lookahead.type = TK_VALUE;
+			lex->lookahead.value.type = TYPE_INT;
+			lex->lookahead.value.integer = (winterInt_t)strtoll(cursor, NULL, 0);
 		} break;
 		
 		case TK_FLOAT: {
-			lex->current.type = TK_VALUE;
-			lex->current.value.type = TYPE_FLOAT;
-			lex->current.value.floating = (winterFloat_t)strtod(cursor, NULL);
+			lex->lookahead.type = TK_VALUE;
+			lex->lookahead.value.type = TYPE_FLOAT;
+			lex->lookahead.value.floating = (winterFloat_t)strtod(cursor, NULL);
 		} break;
 		
 		case TK_IDENT: {
-			lex->current.value.string = MALLOC(size + 1);
-			memcpy(lex->current.value.string, cursor, size);
-			lex->current.value.string[size] = '\0';
+			lex->lookahead.value.string = MALLOC(size + 1);
+			memcpy(lex->lookahead.value.string, cursor, size);
+			lex->lookahead.value.string[size] = '\0';
 		} break;
 		
 		case TK_STRING: {
 			//TODO: create string object
 			char *string = (char*)cursor;
-			lex->current.value.string = MALLOC(size - 1);
+			lex->lookahead.value.string = MALLOC(size - 1);
 			string++;
 			
 			size_t i = 0;
@@ -311,25 +312,25 @@ size_t _winter_nextToken(winterState_t *state, lexState_t *lex) {
 				if (*string == '\\') {
 					winterInt_t character;
 					string += decodeEscape(string, &character);
-					lex->current.value.string[i++] = character;
+					lex->lookahead.value.string[i++] = character;
 				} else {
-					lex->current.value.string[i++] = *string;
+					lex->lookahead.value.string[i++] = *string;
 					string++;
 				}
 			}
 			
-			lex->current.type = TK_VALUE;
-			lex->current.value.type = TYPE_STRING;
-			lex->current.value.string[i] = '\0';
+			lex->lookahead.type = TK_VALUE;
+			lex->lookahead.value.type = TYPE_STRING;
+			lex->lookahead.value.string[i] = '\0';
 		} break;
 		
 		case TK_CHAR: {
-			lex->current.type = TK_VALUE;
-			lex->current.value.type = TYPE_INT;
+			lex->lookahead.type = TK_VALUE;
+			lex->lookahead.value.type = TYPE_INT;
 			if (cursor[1] == '\\') {
-				decodeEscape(cursor + 1, &lex->current.value.integer);
+				decodeEscape(cursor + 1, &lex->lookahead.value.integer);
 			} else {
-				lex->current.value.integer = (winterInt_t)cursor[1];
+				lex->lookahead.value.integer = (winterInt_t)cursor[1];
 			}
 		} break;
 		
@@ -337,9 +338,4 @@ size_t _winter_nextToken(winterState_t *state, lexState_t *lex) {
 	}
 	lex->cur += size;
 	return size;
-}
-
-void _winter_lexStateInit(lexState_t *lex, const char *source) {
-	*lex = (lexState_t){0};
-	lex->source = source;
 }

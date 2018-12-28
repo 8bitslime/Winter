@@ -24,6 +24,7 @@ typedef struct winterTable_t {
 } winterTable_t;
 
 void _winter_tableAlloc(winterState_t *state, winterTable_t *table, size_t initial);
+void _winter_tableFree(winterState_t *state, winterTable_t *table);
 
 void _winter_tableInsert(winterState_t *state, winterTable_t *table, const char *name, const winterObject_t *object);
 void _winter_tableInsertInt(winterState_t *state, winterTable_t *table, const char *name, winterInt_t value);

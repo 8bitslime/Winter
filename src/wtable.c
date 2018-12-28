@@ -14,6 +14,21 @@
 #include <string.h>
 #include <stdio.h>
 
+void _winter_tableAlloc(winterState_t *state, winterTable_t *table, size_t initial) {
+	table->buckets = MALLOC(sizeof(bucket_t) * initial);
+	assert(table->buckets != NULL);
+	memset(table->buckets, 0, sizeof(bucket_t) * initial);
+	
+	table->numBuckets = initial;
+	table->size = 0;
+}
+
+void _winter_tableFree(winterState_t *state, winterTable_t *table) {
+	//TODO: free all objects stored inside table
+	FREE(table->buckets);
+	memset(table, 0, sizeof(winterTable_t));
+}
+
 static unsigned long hashString(const char *string) {
 	unsigned long out = 5381, c;
 	
@@ -22,15 +37,6 @@ static unsigned long hashString(const char *string) {
 	}
 	
 	return out;
-}
-
-void _winter_tableAlloc(winterState_t *state, winterTable_t *table, size_t initial) {
-	table->buckets = MALLOC(sizeof(bucket_t) * initial);
-	assert(table->buckets != NULL);
-	memset(table->buckets, 0, sizeof(bucket_t) * initial);
-	
-	table->numBuckets = initial;
-	table->size = 0;
 }
 
 static bucket_t *getBucket(winterTable_t *table, const char *name) {
@@ -57,7 +63,11 @@ void _winter_tableInsert(winterState_t *state, winterTable_t *table, const char 
 			strcpy(bucket->name, name);
 			table->size++;
 		}
-		bucket->object = *value;
+		if (value) {
+			bucket->object = *value;
+		} else {
+			bucket->object = (winterObject_t){0};
+		}
 	}
 }
 void _winter_tableInsertInt(winterState_t *state, winterTable_t *table, const char *name, winterInt_t value) {
