@@ -45,6 +45,7 @@ int main(int argc, char **argv) {
 				winterObject_t *object = &ast->value;
 				if (ast->type == TK_IDENT) {
 					object = _winter_tableGetObject(&state->globalState, ast->value.string);
+					FREE(ast->value.string);
 				}
 				if (object == NULL) {
 					printf("ERROR\n");
@@ -77,6 +78,6 @@ int main(int argc, char **argv) {
 	}
 	winterFreeState(state);
 	
-	printf("alloctions: %i\nfrees: %i\n", allocations, frees);
+	printf("alloctions:\t%i\nfrees:    \t%i\ndifference:\t%i\n", allocations, frees, allocations - frees);
 	return 0;
 }

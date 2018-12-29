@@ -27,7 +27,6 @@ void _winter_tableAlloc(winterState_t *state, winterTable_t *table, size_t initi
 void _winter_tableFree(winterState_t *state, winterTable_t *table) {
 	//TODO: free all objects stored inside table
 	while (table->head) {
-		printf("free->");
 		bucket_t *temp = table->head->next;
 		FREE(table->head);
 		table->head = temp;
@@ -93,11 +92,6 @@ void _winter_tableInsert(winterState_t *state, winterTable_t *table, const char 
 }
 
 winterObject_t *_winter_tableGetObject(winterTable_t *table, const char *name) {
-	if (!strcmp(name, "print")) {
-		for (bucket_t *slot = table->head; slot != NULL; slot = slot->next) {
-			printf("%s->", slot->name);
-		} printf("\n");
-	}
 	bucket_t *bucket = getBucket(table, name);
 	if (bucket) {
 		return &bucket->object;
