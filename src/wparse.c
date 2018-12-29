@@ -64,7 +64,7 @@ static struct operator_info op_table[] = {
 #define precedence(t) (op_table[t].precedence)
 #define associativity(t) (op_table[t].associativity)
 
-static ast_node_t *allocNode(winterState_t *state, size_t numNodes) {
+static ast_node_t *allocNode(winterState_t *state, int numNodes) {
 	//TODO: better allocator
 	ast_node_t *ret = MALLOC(sizeof(ast_node_t) + sizeof(ast_node_t*) * numNodes);
 	ret->numNodes = numNodes;
@@ -72,7 +72,7 @@ static ast_node_t *allocNode(winterState_t *state, size_t numNodes) {
 	return ret;
 }
 
-static ast_node_t *resizeNode(winterState_t *state, ast_node_t *node, size_t newSize) {
+static ast_node_t *resizeNode(winterState_t *state, ast_node_t *node, int newSize) {
 	//TODO: failed allocation checking
 	ast_node_t *ret = REALLOC(node, sizeof(ast_node_t) + sizeof(ast_node_t*) * newSize);
 	ret->numNodes = newSize;
@@ -242,7 +242,7 @@ typedef int (*unary_op)(winterObject_t *, winterObject_t *);
 ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 	if (tree && tree->type == TK_STATEMENT) {
 		ast_node_t *node = NULL;
-		for (size_t i = 0; i < tree->numNodes; i++) {
+		for (int i = 0; i < tree->numNodes; i++) {
 			FREE(node);
 			if (tree->nodes[i] == NULL) {
 				printf("error: null node!\n");
@@ -270,17 +270,23 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		if (branch1->type == TK_IDENT) {
 			a = _winter_tableGetObject(&state->globalState, branch1->value.string);
 			FREE(branch1->value.string);
+			if (a == NULL) {
+				return NULL;
+			}
 		}
 		if (branch2 != NULL) {
 			b = &branch2->value;
 			if (branch2->type == TK_IDENT) {
-				b = _winter_tableGetObject(&state->globalState, branch2->value.string);			
+				b = _winter_tableGetObject(&state->globalState, branch2->value.string);
 				FREE(branch2->value.string);
+				if (b == NULL) {
+					return NULL;
+				}
 			}
 		}
 		
 		if (isUnary(tree->type)) {
-			((unary_op)op_table[tree->type].function)(&tree->value, a);
+			((unary_op) op_table[tree->type].function)(&tree->value, a);
 		} else {
 			((binary_op)op_table[tree->type].function)(&tree->value, a, b);
 		}

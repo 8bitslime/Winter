@@ -248,11 +248,11 @@ size_t _winter_nextToken(winterState_t *state, lexState_t *lex) {
 	token_type_t type;
 	lex->current = lex->lookahead;
 	
+	do {
+		skipWhitespaces(lex);
+	} while(skipComments(lex));
+	
 	if (*cursor) {
-		do {
-			skipWhitespaces(lex);
-		} while(skipComments(lex));
-		
 		if (isAlphaUnder(*cursor)) {
 			if ((size = isKeyword(cursor, &type))) goto end;
 			if ((size = isIdentifier(cursor))) {

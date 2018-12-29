@@ -74,7 +74,6 @@ int main(int argc, char **argv) {
 		buffer[len-1] = ';';
 		buffer[len]   = '\n';
 		buffer[len+1] = '\0';
-		printf("%s", buffer);
 	}
 	winterFreeState(state);
 	

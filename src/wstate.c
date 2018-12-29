@@ -16,7 +16,7 @@ winterState_t *winterCreateState(winterAllocator_t allocator) {
 		return NULL;
 	}
 	ret->allocator = allocator;
-	_winter_tableAlloc(ret, &ret->globalState, 25);
+	_winter_tableAlloc(ret, &ret->globalState, 3);
 	return ret;
 }
 

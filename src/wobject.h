@@ -27,6 +27,11 @@ typedef struct winterObject_t {
 	};
 } winterObject_t;
 
+static const winterObject_t nullObject = {
+	TYPE_NULL,
+	{0}
+};
+
 //Returns zero if a and b are incompatible objects
 //Result stored in dest
 //All paramters are allowed to point to the same object
