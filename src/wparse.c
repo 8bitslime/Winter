@@ -93,7 +93,19 @@ static ast_node_t *createNode(winterState_t *state, const token_t *token) {
 	}
 	
 	ret->type = token->type;
+	for (int i = 0; i < ret->numNodes; i++) {
+		ret->nodes[i] = NULL;
+	}
 	return ret;
+}
+
+static void freeTree(winterState_t *state, ast_node_t *tree) {
+	if (tree) {
+		for (int i = 0; i < tree->numNodes; i++) {
+			freeTree(state, tree->nodes[i]);
+		}
+		FREE(tree);
+	}
 }
 
 ast_node_t *_winter_parseExpression(winterState_t *state, lexState_t *lex) {
@@ -117,6 +129,9 @@ ast_node_t *_winter_parseExpression(winterState_t *state, lexState_t *lex) {
 					if (token.type == TK_LPAREN) {
 						node = parenthesis = _winter_parseExpression(state, lex);
 						if (lex->current.type != TK_RPAREN) {
+							_winter_stateError(state, "expected closing parenthesis");
+							freeTree(state, parenthesis);
+							freeTree(state, top);
 							return NULL;
 						}
 					} else {
@@ -145,6 +160,10 @@ ast_node_t *_winter_parseExpression(winterState_t *state, lexState_t *lex) {
 						top = append = node;
 					}
 				} else {
+					if (top) {
+						_winter_stateError(state, "expected expression");
+						freeTree(state, top);
+					}
 					return NULL;
 				}
 			} break;
@@ -221,18 +240,30 @@ static ast_node_t *declareVar(winterState_t *state, lexState_t *lex) {
 ast_node_t *_winter_parseStatement(winterState_t *state, lexState_t *lex) {
 	ast_node_t *ret = NULL;
 	
-	if ((ret = declareVar(state, lex))) {
-		// _winter_nextToken(state, lex);
-	} else {
-		ret = _winter_parseExpression(state, lex);
+	if (lex->current.type == TK_SEMICOLON) {
+		_winter_nextToken(state, lex);
+		return NULL;
+	}
+	
+	ret = declareVar(state, lex);
+	if (ret == NULL) {
+		if (state->errorString) {
+			return NULL;
+		} else {
+			ret = _winter_parseExpression(state, lex);
+		}
 	}
 	
 	if (lex->current.type == TK_SEMICOLON) {
 		// _winter_nextToken(state, lex);
 		return ret;
-	} // else expected ';'!
+	} else {
+		_winter_stateError(state, "expected semicolon");
+		freeTree(state, ret);
+		return NULL;
+	}
 	
-	//free tree
+	freeTree(state, ret);
 	return NULL;
 }
 
@@ -248,7 +279,11 @@ ast_node_t *generateTreeThing(winterState_t *state, const char *source) {
 			ret = resizeNode(state, ret, ret->numNodes + 1);
 			ret->nodes[ret->numNodes-1] = statement;
 		} else {
-			//check for parse error then free resources
+			//if error occurred, back out
+			if (state->errorString) {
+				freeTree(state, ret);
+				return NULL;
+			}
 		}
 	}
 	return ret;
@@ -298,18 +333,18 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		tree->value = nullObject;
 		tree->numNodes = 0;
 	} else if (tree && isOperator(tree->type)) {
-		ast_node_t *branches[2]; //hard coded for the moment
+		// ast_node_t *branches[2]; //hard coded for the moment
 		winterObject_t *vals[2];
 		for (int i = 0; i < tree->numNodes; i++) {
-			branches[i] = execute(state, tree->nodes[i]);
+			tree->nodes[i] = execute(state, tree->nodes[i]);
 			
-			if (branches[i] == NULL) {
-				//error, back out
+			if (tree->nodes[i] == NULL) {
+				freeTree(state, tree);
 				return NULL;
 			}
 			
-			vals[i] = &branches[i]->value;
-			if (branches[i]->type == TK_REF) {
+			vals[i] = &tree->nodes[i]->value;
+			if (tree->nodes[i]->value.type == TYPE_REF) {
 				vals[i] = vals[i]->pointer;
 			}
 		}
@@ -326,24 +361,23 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		}
 		
 		for (int i = 0; i < tree->numNodes; i++) {
-			FREE(branches[i]);
+			FREE(tree->nodes[i]);
 		}
-		tree->type = TK_VALUE;
 		tree->numNodes = 0;
-	} else if (tree->type == TK_IDENT) {
+		tree->type = TK_VALUE;
+	} else if (tree && tree->type == TK_IDENT) {
 		winterObject_t *ref = _winter_tableGetObject(&state->globalState, tree->value.string);
 		
 		if (ref == NULL) {
 			//throw error, undeclared variable
-			FREE(tree);
-			printf("undeclared variable '%s'!\n", tree->value.string);
+			_winter_stateError(state, "undeclared identifier: '%s'", tree->value.string);
 			FREE(tree->value.string);
+			FREE(tree);
 			return NULL;
 		}
 		FREE(tree->value.string);
 		
-		
-		tree->type = TK_REF;
+		tree->type = TK_VALUE;
 		tree->value.type = TYPE_REF;
 		tree->value.pointer = ref;
 	}

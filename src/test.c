@@ -35,12 +35,16 @@ int main(int argc, char **argv) {
 	
 	while (strcmp(buffer, "exit;\n")) {
 		
-		if (buffer[0]) {
+		if (buffer[0] && buffer[0] != '\n') {
 			ast_node_t *ast = generateTreeThing(state, buffer);
 			ast = execute(state, ast);
 			
 			if (ast == NULL) {
-				printf("ERROR\n");
+				if (state->errorString) {
+					printf("ERROR: %s\n", state->errorString);
+					FREE(state->errorString);
+					state->errorString = NULL;
+				}
 			} else {
 				winterObject_t *object = &ast->value;
 				while (object->type == TYPE_REF) {
