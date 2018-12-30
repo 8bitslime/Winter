@@ -43,9 +43,8 @@ int main(int argc, char **argv) {
 				printf("ERROR\n");
 			} else {
 				winterObject_t *object = &ast->value;
-				if (ast->type == TK_IDENT) {
-					object = _winter_tableGetObject(&state->globalState, ast->value.string);
-					FREE(ast->value.string);
+				while (object->type == TYPE_REF) {
+					object = object->pointer;
 				}
 				if (object == NULL) {
 					printf("ERROR\n");

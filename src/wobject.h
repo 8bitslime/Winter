@@ -14,7 +14,7 @@
 
 typedef enum object_type_t {
 	TYPE_NULL = 0,
-	TYPE_INT, TYPE_FLOAT, TYPE_TABLE, TYPE_STRING, TYPE_POINTER
+	TYPE_INT, TYPE_FLOAT, TYPE_TABLE, TYPE_STRING, TYPE_POINTER, TYPE_REF
 } object_type_t;
 
 typedef struct winterObject_t {

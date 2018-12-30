@@ -37,7 +37,7 @@ typedef enum token_type_t {
 	TK_BITOR, TK_BITAND, TK_NOT,
 	
 	//Literals
-	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR,
+	TK_INT, TK_FLOAT, TK_STRING, TK_CHAR, TK_REF,
 	
 	//Keywords
 	TK_FOR, TK_DO, TK_WHILE, TK_BREAK,

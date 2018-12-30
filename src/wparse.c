@@ -289,41 +289,33 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		tree->value = nullObject;
 		tree->numNodes = 0;
 	} else if (tree && isOperator(tree->type)) {
-		ast_node_t *branch1 = execute(state, tree->nodes[0]);
-		ast_node_t *branch2 = NULL;
-		if (tree->numNodes > 1) {
-			branch2 = execute(state, tree->nodes[1]);
-		}
-		
-		winterObject_t *b, *a = &branch1->value;
-		if (branch1->type == TK_IDENT) {
-			a = _winter_tableGetObject(&state->globalState, branch1->value.string);
-			FREE(branch1->value.string);
-			if (a == NULL) {
-				return NULL;
-			}
-		}
-		if (branch2 != NULL) {
-			b = &branch2->value;
-			if (branch2->type == TK_IDENT) {
-				b = _winter_tableGetObject(&state->globalState, branch2->value.string);
-				FREE(branch2->value.string);
-				if (b == NULL) {
-					return NULL;
-				}
+		ast_node_t *branches[2]; //hard coded for the moment
+		winterObject_t *vals[2];
+		for (int i = 0; i < tree->numNodes; i++) {
+			branches[i] = execute(state, tree->nodes[i]);
+			vals[i] = &branches[i]->value;
+			if (branches[i]->type == TK_REF) {
+				vals[i] = vals[i]->pointer;
 			}
 		}
 		
 		if (isUnary(tree->type)) {
-			((unary_op) op_table[tree->type].function)(&tree->value, a);
+			((unary_op) op_table[tree->type].function)(&tree->value, vals[0]);
 		} else {
-			((binary_op)op_table[tree->type].function)(&tree->value, a, b);
+			((binary_op)op_table[tree->type].function)(&tree->value, vals[0], vals[1]);
 		}
 		
-		FREE(branch1);
-		FREE(branch2);
+		for (int i = 0; i < tree->numNodes; i++) {
+			FREE(branches[i]);
+		}
 		tree->type = TK_VALUE;
 		tree->numNodes = 0;
+	} else if (tree->type == TK_IDENT) {
+		tree->type = TK_REF;
+		tree->value.type = TYPE_REF;
+		winterObject_t *ref = _winter_tableGetObject(&state->globalState, tree->value.string);
+		FREE(tree->value.string);
+		tree->value.pointer = ref;
 	}
 	return tree;
 }
