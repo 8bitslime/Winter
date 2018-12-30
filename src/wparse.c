@@ -37,10 +37,10 @@ static struct operator_info op_table[] = {
 	opinfo(0, RIGHT, NULL, TK_INC),
 	opinfo(0, RIGHT, NULL, TK_DEC),
 	opinfo(5, RIGHT, _winter_objectPow, TK_EXP),
-	opinfo(0, LEFT,  NULL, TK_MIN_EQ),
-	opinfo(0, LEFT,  NULL, TK_ADD_EQ),
-	opinfo(0, LEFT,  NULL, TK_MUL_EQ),
-	opinfo(0, LEFT,  NULL, TK_DIV_EQ),
+	opinfo(0, LEFT,  _winter_objectAddEq, TK_ADD_EQ),
+	opinfo(0, LEFT,  _winter_objectMinEq, TK_MIN_EQ),
+	opinfo(0, LEFT,  _winter_objectMulEq, TK_MUL_EQ),
+	opinfo(0, LEFT,  _winter_objectDivEq, TK_DIV_EQ),
 	opinfo(1, RIGHT, _winter_objectEqual, TK_EQ),
 	opinfo(1, RIGHT, NULL, TK_NEQ),
 	opinfo(2, RIGHT, NULL, TK_LEQ),
@@ -254,8 +254,8 @@ ast_node_t *generateTreeThing(winterState_t *state, const char *source) {
 	return ret;
 }
 
-typedef int (*binary_op)(winterObject_t *, winterObject_t *, winterObject_t *);
-typedef int (*unary_op)(winterObject_t *, winterObject_t *);
+typedef bool_t (*binary_op)(winterObject_t *, winterObject_t *, winterObject_t *);
+typedef bool_t (*unary_op)(winterObject_t *, winterObject_t *);
 
 ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 	if (tree && tree->type == TK_STATEMENT) {
@@ -263,14 +263,19 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		for (int i = 0; i < tree->numNodes; i++) {
 			FREE(node);
 			if (tree->nodes[i] == NULL) {
+				//this should never happen...
 				printf("error: null node!\n");
 			}
 			node = execute(state, tree->nodes[i]);
+			// if (node == NULL) {
+			// 	error, back out
+			// }
 		}
 		FREE(tree);
 		//TODO: push node to stack
 		return node;
 	} else if (tree && tree->type == TK_VAR) {
+		//Variable declaration
 		for (int i = 0; i < tree->numNodes; i++) {
 			if (tree->nodes[i]->type == TK_IDENT) {
 				_winter_tableInsert(state, &state->globalState, tree->nodes[i]->value.string, NULL);
@@ -278,6 +283,10 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 			} else if (tree->nodes[i]->type == TK_ASSIGN) {
 				ast_node_t *left = tree->nodes[i]->nodes[0];
 				ast_node_t *right = execute(state, tree->nodes[i]->nodes[1]);
+				if (right == NULL) {
+					//error, back out
+					return NULL;
+				}
 				_winter_tableInsert(state, &state->globalState, left->value.string, &right->value);
 				FREE(left->value.string);
 				FREE(left);
@@ -293,16 +302,27 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		winterObject_t *vals[2];
 		for (int i = 0; i < tree->numNodes; i++) {
 			branches[i] = execute(state, tree->nodes[i]);
+			
+			if (branches[i] == NULL) {
+				//error, back out
+				return NULL;
+			}
+			
 			vals[i] = &branches[i]->value;
 			if (branches[i]->type == TK_REF) {
 				vals[i] = vals[i]->pointer;
 			}
 		}
 		
+		bool_t typeError;
 		if (isUnary(tree->type)) {
-			((unary_op) op_table[tree->type].function)(&tree->value, vals[0]);
+			typeError = !((unary_op) op_table[tree->type].function)(&tree->value, vals[0]);
 		} else {
-			((binary_op)op_table[tree->type].function)(&tree->value, vals[0], vals[1]);
+			typeError = !((binary_op)op_table[tree->type].function)(&tree->value, vals[0], vals[1]);
+		}
+		
+		if (typeError) {
+			printf("type error!\n");
 		}
 		
 		for (int i = 0; i < tree->numNodes; i++) {
@@ -311,10 +331,20 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		tree->type = TK_VALUE;
 		tree->numNodes = 0;
 	} else if (tree->type == TK_IDENT) {
+		winterObject_t *ref = _winter_tableGetObject(&state->globalState, tree->value.string);
+		
+		if (ref == NULL) {
+			//throw error, undeclared variable
+			FREE(tree);
+			printf("undeclared variable '%s'!\n", tree->value.string);
+			FREE(tree->value.string);
+			return NULL;
+		}
+		FREE(tree->value.string);
+		
+		
 		tree->type = TK_REF;
 		tree->value.type = TYPE_REF;
-		winterObject_t *ref = _winter_tableGetObject(&state->globalState, tree->value.string);
-		FREE(tree->value.string);
 		tree->value.pointer = ref;
 	}
 	return tree;

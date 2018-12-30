@@ -168,9 +168,45 @@ bool_t _winter_objectEqual(winterObject_t *dest, const winterObject_t *a, const 
 }
 
 bool_t _winter_objectAssign(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
-	//TODO: garbage collection
+	//TODO: reference counting
 	*dest = *a = *b;
 	return true;
+}
+
+bool_t _winter_objectAddEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	bool_t result = _winter_objectAdd(a, a, b);
+	if (result) {
+		*dest = *a;
+		return true;
+	}
+	return false;
+}
+
+bool_t _winter_objectMinEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	bool_t result = _winter_objectSub(a, a, b);
+	if (result) {
+		*dest = *a;
+		return true;
+	}
+	return false;
+}
+
+bool_t _winter_objectMulEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	bool_t result = _winter_objectMul(a, a, b);
+	if (result) {
+		*dest = *a;
+		return true;
+	}
+	return false;
+}
+
+bool_t _winter_objectDivEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	bool_t result = _winter_objectDiv(a, a, b);
+	if (result) {
+		*dest = *a;
+		return true;
+	}
+	return false;
 }
 
 bool_t _winter_objectPreInc(winterObject_t *dest, winterObject_t *a) {

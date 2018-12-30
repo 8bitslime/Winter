@@ -26,7 +26,7 @@ static const char *keywords[] = {
 
 static const char *operators[] = {
 	//all multicharacter operators
-	"++", "--", "**", "-=", "+=", "*=", "/=", "==", "!=", "<=", ">=", "||", "&&",
+	"++", "--", "**", "+=", "-=", "*=", "/=", "==", "!=", "<=", ">=", "||", "&&",
 };	
 static const char *single_operators = ".=<>+-*/%|&!";
 static const char *symbols = ",;:()[]{}";

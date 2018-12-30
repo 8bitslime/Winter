@@ -44,7 +44,13 @@ bool_t _winter_objectDiv(winterObject_t *dest, const winterObject_t *a, const wi
 bool_t _winter_objectMod(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
 bool_t _winter_objectPow(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
 bool_t _winter_objectEqual(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b);
+
 bool_t _winter_objectAssign(winterObject_t *dest, winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectAddEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectMinEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectMulEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b);
+bool_t _winter_objectDivEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b);
+
 bool_t _winter_objectPreInc(winterObject_t *dest, winterObject_t *a);
 bool_t _winter_objectPreDec(winterObject_t *dest, winterObject_t *a);
 bool_t _winter_objectNegate(winterObject_t *dest, const winterObject_t *a);
