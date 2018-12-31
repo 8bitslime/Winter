@@ -117,9 +117,9 @@ ast_node_t *_winter_parseExpression(winterState_t *state, lexState_t *lex) {
 		operator
 	} expect = expression;
 	
-	while (token.type != TK_EOF) {
-		_winter_nextToken(state, lex);
-		token = lex->current;
+	for (; token.type != TK_EOF; _winter_nextToken(state, lex)) {
+		// _winter_nextToken(state, lex);
+		token = lex->lookahead;
 		
 		switch (expect) {
 			case expression: {
@@ -128,7 +128,7 @@ ast_node_t *_winter_parseExpression(winterState_t *state, lexState_t *lex) {
 					
 					if (token.type == TK_LPAREN) {
 						node = parenthesis = _winter_parseExpression(state, lex);
-						if (lex->current.type != TK_RPAREN) {
+						if (lex->lookahead.type != TK_RPAREN) {
 							_winter_stateError(state, "expected closing parenthesis");
 							freeTree(state, parenthesis);
 							freeTree(state, top);
@@ -143,6 +143,7 @@ ast_node_t *_winter_parseExpression(winterState_t *state, lexState_t *lex) {
 					} else {
 						top = node;
 					}
+					
 					expect = operator;
 					
 				} else if (isUnaryToken(token.type)) {
@@ -240,11 +241,6 @@ static ast_node_t *declareVar(winterState_t *state, lexState_t *lex) {
 ast_node_t *_winter_parseStatement(winterState_t *state, lexState_t *lex) {
 	ast_node_t *ret = NULL;
 	
-	if (lex->current.type == TK_SEMICOLON) {
-		_winter_nextToken(state, lex);
-		return NULL;
-	}
-	
 	ret = declareVar(state, lex);
 	if (ret == NULL) {
 		if (state->errorString) {
@@ -254,8 +250,8 @@ ast_node_t *_winter_parseStatement(winterState_t *state, lexState_t *lex) {
 		}
 	}
 	
-	if (lex->current.type == TK_SEMICOLON) {
-		// _winter_nextToken(state, lex);
+	if (lex->lookahead.type == TK_SEMICOLON) {
+		_winter_nextToken(state, lex);
 		return ret;
 	} else {
 		_winter_stateError(state, "expected semicolon");
@@ -273,7 +269,9 @@ ast_node_t *generateTreeThing(winterState_t *state, const char *source) {
 	
 	ast_node_t *ret = allocNode(state, 0);
 	ret->type = TK_STATEMENT;
-	while (lex.current.type != TK_EOF) {
+	while (lex.lookahead.type != TK_EOF) {
+		// while (lex.lookahead.type == TK_SEMICOLON) _winter_nextToken(state, &lex);
+		
 		ast_node_t *statement = _winter_parseStatement(state, &lex);
 		if (statement != NULL) {
 			ret = resizeNode(state, ret, ret->numNodes + 1);

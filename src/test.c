@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 	char buffer[512] = {0};
 	winterState_t *state = winterCreateState(allocator);
 	
-	while (strcmp(buffer, "exit;\n")) {
+	while (strcmp(buffer, "exit;")) {
 		
 		if (buffer[0] && buffer[0] != '\n') {
 			ast_node_t *ast = generateTreeThing(state, buffer);
@@ -76,8 +76,8 @@ int main(int argc, char **argv) {
 		fgets(buffer, 512, stdin);
 		size_t len = strlen(buffer);
 		buffer[len-1] = ';';
-		buffer[len]   = '\n';
-		buffer[len+1] = '\0';
+		buffer[len]   = '\0';
+		printf("thing: \"%s\"\n", buffer);
 	}
 	winterFreeState(state);
 	
