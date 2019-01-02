@@ -2,7 +2,7 @@
 ** The Winter programming language
 ** See README.md for more information 
 **
-** Copyright (c) Zachary Wells, see LICENSE for more details
+** Copyright (c) 2019 Zachary Wells, see LICENSE for more details
 */
 
 #ifndef WINTER_H

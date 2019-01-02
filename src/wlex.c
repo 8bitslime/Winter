@@ -4,7 +4,7 @@
 ** PURPOSE: Contains all functions necessary for splitting a string into tokens
 **          and categorizing them.
 **
-** Copyright (c) 2018 Zachary Wells, see LICENSE for more details
+** Copyright (c) 2019 Zachary Wells, see LICENSE for more details
 */
 
 #include "wlex.h"

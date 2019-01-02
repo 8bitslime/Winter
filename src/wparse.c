@@ -3,7 +3,7 @@
 **
 ** PURPOSE: Functions for parsing tokens and generating ASTs
 **
-** Copyright (c) 2018 Zachary Wells, see LICENSE for more details
+** Copyright (c) 2019 Zachary Wells, see LICENSE for more details
 */
 
 #include "wparse.h"

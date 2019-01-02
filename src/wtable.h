@@ -3,7 +3,7 @@
 ** 
 ** PURPOSE: Defines tables and functions used to manipulate them
 **
-** Copyright (c) 2018 Zachary Wells, see LICENSE for more details
+** Copyright (c) 2019 Zachary Wells, see LICENSE for more details
 */
 
 #ifndef WTABLE_H

@@ -3,7 +3,7 @@
 **
 ** PURPOSE: Basic header with internal types
 **
-** Copyright (c) 2018 Zachary Wells, see LICENSE for more details
+** Copyright (c) 2019 Zachary Wells, see LICENSE for more details
 */
 
 #ifndef WTYPE_H
