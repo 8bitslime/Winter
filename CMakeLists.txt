@@ -8,6 +8,7 @@ set(WINTER_SOURCES
 	src/wobject.c
 	src/wparse.c
 	src/wstate.c
+	src/wstring.c
 	src/wtable.c
 	src/test.c
 )

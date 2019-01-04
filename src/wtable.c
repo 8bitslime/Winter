@@ -28,6 +28,7 @@ void _winter_tableFree(winterState_t *state, winterTable_t *table) {
 	//TODO: free all objects stored inside table
 	while (table->head) {
 		bucket_t *temp = table->head->next;
+		_winter_objectDelRef(state, &table->head->object);
 		FREE(table->head);
 		table->head = temp;
 	}
@@ -36,19 +37,16 @@ void _winter_tableFree(winterState_t *state, winterTable_t *table) {
 	memset(table, 0, sizeof(winterTable_t));
 }
 
-static unsigned long hashString(const char *string) {
-	unsigned long out = 5381, c;
-	while ((c = *string++)) {
-		out = ((out << 5) + out) + c;
+static bucket_t *getBucket(winterTable_t *table, winterString_t *string) {
+	if (string->rehash) {
+		printf("rehashing\n");
+		string->hash = _winter_stringHash(string->string);
 	}
-	return out;
-}
-
-static bucket_t *getBucket(winterTable_t *table, const char *name) {
-	unsigned long hash = hashString(name) % table->numBuckets;
+	
+	unsigned long hash = string->hash % table->numBuckets;
 	bucket_t *slot = table->buckets[hash];
 	
-	while (slot && strcmp(name, slot->name)) {
+	while (slot && strcmp(string->string, slot->name)) {
 		if (slot->hash % table->numBuckets != hash) {
 			return NULL;
 		}
@@ -57,20 +55,19 @@ static bucket_t *getBucket(winterTable_t *table, const char *name) {
 	return slot;
 }
 
-void _winter_tableInsert(winterState_t *state, winterTable_t *table, const char *name, const winterObject_t *value) {
-	bucket_t *bucket = getBucket(table, name);
+void _winter_tableInsert(winterState_t *state, winterTable_t *table, winterString_t *string, const winterObject_t *value) {
+	bucket_t *bucket = getBucket(table, string);
 	if (bucket == NULL) {
 		//Allocate bucket and string in same chunk
-		bucket = MALLOC(sizeof(bucket_t) + strlen(name) + 1);
+		bucket = MALLOC(sizeof(bucket_t) + string->length + 1);
 		
 		//Set name string to memory after bucket
 		bucket->name = (char*)(bucket + 1);
-		strcpy(bucket->name, name);
+		strcpy(bucket->name, string->string);
 		
-		unsigned long hash = hashString(name);
-		bucket->hash = hash;
+		bucket->hash = string->hash;
 		
-		bucket_t **slot = &table->buckets[hash % table->numBuckets];
+		bucket_t **slot = &table->buckets[string->hash % table->numBuckets];
 		
 		if (*slot == NULL) {
 			//empty slot
@@ -87,13 +84,15 @@ void _winter_tableInsert(winterState_t *state, winterTable_t *table, const char 
 	if (value == NULL) {
 		bucket->object = nullObject;
 	} else {
-		bucket->object = *value;
+		bucket->object = *_winter_objectAddRef(state, value);
 	}
 }
 
-winterObject_t *_winter_tableGetObject(winterTable_t *table, const char *name) {
-	bucket_t *bucket = getBucket(table, name);
-	if (bucket) {
+winterObject_t *_winter_tableGetObject(winterTable_t *table, winterString_t *string) {
+	bucket_t *bucket = getBucket(table, string);
+	printf("finding thing: %s\n", string->string);
+	if (bucket != NULL) {
+		printf("found!\n");
 		return &bucket->object;
 	} else {
 		return NULL;

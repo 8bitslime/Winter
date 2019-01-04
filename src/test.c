@@ -3,6 +3,7 @@
 #include "wlex.h"
 #include "wtable.h"
 #include "wparse.h"
+#include "wstring.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -64,7 +65,7 @@ int main(int argc, char **argv) {
 							printf("%f\n", object->floating);
 							break;
 						case TYPE_STRING:
-							printf("\"%s\"\n", object->string);
+							printf("\"%s\", refcount: %i\n", object->string->string, ((refcounted_t*)object->pointer)->refcount);
 						default: break;
 					}
 				}

@@ -9,6 +9,8 @@
 #ifndef WTYPE_H
 #define WTYPE_H
 
+#define REFCOUNTED int refcount
+
 //Just an int, but helps code readability
 typedef int bool_t;
 #ifndef true
@@ -16,6 +18,13 @@ typedef int bool_t;
 #endif
 #ifndef false
 #define false 0
+#endif
+
+//Stupid micro optimizations
+#if defined(__GNUC__)
+#define unlikely(e) (__builtin_expect((e) != false, false))
+#else
+#define unlikely(e) (e)
 #endif
 
 #endif

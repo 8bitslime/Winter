@@ -8,6 +8,7 @@
 */
 
 #include "wlex.h"
+#include "wstring.h"
 
 #include <ctype.h>
 #include <string.h>
@@ -296,15 +297,13 @@ size_t _winter_nextToken(winterState_t *state, lexState_t *lex) {
 		} break;
 		
 		case TK_IDENT: {
-			lex->lookahead.value.string = MALLOC(size + 1);
-			memcpy(lex->lookahead.value.string, cursor, size);
-			lex->lookahead.value.string[size] = '\0';
+			printf("identifier length: %i\n", size);
+			lex->lookahead.value.string = _winter_stringCreateLength(state, cursor, size);
 		} break;
 		
 		case TK_STRING: {
-			//TODO: create string object
 			char *string = (char*)cursor;
-			lex->lookahead.value.string = MALLOC(size - 1);
+			lex->lookahead.value.string = _winter_stringAlloc(state, size-1);
 			string++;
 			
 			size_t i = 0;
@@ -312,16 +311,17 @@ size_t _winter_nextToken(winterState_t *state, lexState_t *lex) {
 				if (*string == '\\') {
 					winterInt_t character;
 					string += decodeEscape(string, &character);
-					lex->lookahead.value.string[i++] = character;
+					lex->lookahead.value.string->string[i++] = character;
 				} else {
-					lex->lookahead.value.string[i++] = *string;
+					lex->lookahead.value.string->string[i++] = *string;
 					string++;
 				}
 			}
 			
 			lex->lookahead.type = TK_VALUE;
 			lex->lookahead.value.type = TYPE_STRING;
-			lex->lookahead.value.string[i] = '\0';
+			lex->lookahead.value.string->string[i] = '\0';
+			lex->lookahead.value.string->length = i;
 		} break;
 		
 		case TK_CHAR: {

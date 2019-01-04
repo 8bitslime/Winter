@@ -104,6 +104,7 @@ static void freeTree(winterState_t *state, ast_node_t *tree) {
 		for (int i = 0; i < tree->numNodes; i++) {
 			freeTree(state, tree->nodes[i]);
 		}
+		// _winter_objectDelRef(state, &tree->value);
 		FREE(tree);
 	}
 }
@@ -287,8 +288,8 @@ ast_node_t *generateTreeThing(winterState_t *state, const char *source) {
 	return ret;
 }
 
-typedef bool_t (*binary_op)(winterObject_t *, winterObject_t *, winterObject_t *);
-typedef bool_t (*unary_op)(winterObject_t *, winterObject_t *);
+typedef bool_t (*binary_op)(winterState_t *, winterObject_t *, winterObject_t *, winterObject_t *);
+typedef bool_t (*unary_op)(winterState_t *, winterObject_t *, winterObject_t *);
 
 ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 	if (tree && tree->type == TK_STATEMENT) {
@@ -349,9 +350,9 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		
 		bool_t typeError;
 		if (isUnary(tree->type)) {
-			typeError = !((unary_op) op_table[tree->type].function)(&tree->value, vals[0]);
+			typeError = !((unary_op) op_table[tree->type].function)(state, &tree->value, vals[0]);
 		} else {
-			typeError = !((binary_op)op_table[tree->type].function)(&tree->value, vals[0], vals[1]);
+			typeError = !((binary_op)op_table[tree->type].function)(state, &tree->value, vals[0], vals[1]);
 		}
 		
 		if (typeError) {
@@ -368,13 +369,13 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 		
 		if (ref == NULL) {
 			//throw error, undeclared variable
-			_winter_stateError(state, "undeclared identifier: '%s'", tree->value.string);
-			FREE(tree->value.string);
+			_winter_stateError(state, "undeclared identifier '%s'", tree->value.string->string);
+			_winter_stringFree(state, tree->value.string);
 			FREE(tree);
 			return NULL;
 		}
-		FREE(tree->value.string);
-		
+		_winter_stringFree(state, tree->value.string);
+				
 		tree->type = TK_VALUE;
 		tree->value.type = TYPE_REF;
 		tree->value.pointer = ref;

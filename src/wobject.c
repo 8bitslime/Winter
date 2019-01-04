@@ -7,11 +7,44 @@
 */
 
 #include "wobject.h"
-#include "math.h"
+#include "wtable.h"
+
+#include <math.h>
+
+#define isRefCounted(t) ((t) == TYPE_TABLE || (t) == TYPE_STRING)
+
+winterObject_t *_winter_objectAddRef(winterState_t *state, winterObject_t *object) {
+	if (isRefCounted(object->type)) {
+		refcounted_t *obj = object->pointer;
+		obj->refcount++;
+	}
+	return object;
+}
+
+winterObject_t *_winter_objectDelRef(winterState_t *state, winterObject_t *object) {
+	if (isRefCounted(object->type)) {
+		refcounted_t *obj = object->pointer;
+		obj->refcount--;
+		printf("deleted reference\n");
+		if (obj->refcount <= 0) {
+			switch (object->type) {
+				case TYPE_TABLE:
+					_winter_tableFree(state, object->pointer);
+					break;
+				case TYPE_STRING:
+					_winter_stringFree(state, object->string);
+					break;
+				
+				default: break;
+			}
+		}
+	}
+	return object;
+}
 
 #define typeCheck(ta, tb) (a->type == (ta) && b->type == (tb))
 
-bool_t _winter_objectToInt(winterObject_t *dest, const winterObject_t *a) {
+bool_t _winter_objectToInt(winterState_t *state, winterObject_t *dest, const winterObject_t *a) {
 	switch (a->type) {
 		case TYPE_INT:
 			*dest = *a;
@@ -37,7 +70,7 @@ static winterFloat_t toFloat(const winterObject_t *a) {
 	}
 }
 
-bool_t _winter_objectAdd(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+bool_t _winter_objectAdd(winterState_t *state, winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
 	if (typeCheck(TYPE_INT, TYPE_INT)) {
 		dest->type = TYPE_INT;
 		dest->integer = a->integer + b->integer;
@@ -55,7 +88,7 @@ bool_t _winter_objectAdd(winterObject_t *dest, const winterObject_t *a, const wi
 	return false;
 }
 
-bool_t _winter_objectSub(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+bool_t _winter_objectSub(winterState_t *state, winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
 	if (typeCheck(TYPE_INT, TYPE_INT)) {
 		dest->type = TYPE_INT;
 		dest->integer = a->integer - b->integer;
@@ -73,7 +106,7 @@ bool_t _winter_objectSub(winterObject_t *dest, const winterObject_t *a, const wi
 	return false;
 }
 
-bool_t _winter_objectMul(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+bool_t _winter_objectMul(winterState_t *state, winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
 	if (typeCheck(TYPE_INT, TYPE_INT)) {
 		dest->type = TYPE_INT;
 		dest->integer = a->integer * b->integer;
@@ -91,7 +124,7 @@ bool_t _winter_objectMul(winterObject_t *dest, const winterObject_t *a, const wi
 	return false;
 }
 
-bool_t _winter_objectDiv(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+bool_t _winter_objectDiv(winterState_t *state, winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
 	if (typeCheck(TYPE_INT, TYPE_INT)) {
 		dest->type = TYPE_INT;
 		dest->integer = a->integer / b->integer;
@@ -109,7 +142,7 @@ bool_t _winter_objectDiv(winterObject_t *dest, const winterObject_t *a, const wi
 	return false;
 }
 
-bool_t _winter_objectMod(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+bool_t _winter_objectMod(winterState_t *state, winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
 	if (typeCheck(TYPE_INT, TYPE_INT)) {
 		dest->type = TYPE_INT;
 		dest->integer = a->integer % b->integer;
@@ -123,7 +156,7 @@ bool_t _winter_objectMod(winterObject_t *dest, const winterObject_t *a, const wi
 	return false;
 }
 
-bool_t _winter_objectPow(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+bool_t _winter_objectPow(winterState_t *state, winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
 	if (typeCheck(TYPE_INT, TYPE_INT)) {
 		dest->type = TYPE_INT;
 		dest->integer = (winterInt_t)(pow(toFloat(a), toFloat(b)) + 0.5);
@@ -137,7 +170,7 @@ bool_t _winter_objectPow(winterObject_t *dest, const winterObject_t *a, const wi
 	return false;
 }
 
-bool_t _winter_objectNegate(winterObject_t *dest, const winterObject_t *a) {
+bool_t _winter_objectNegate(winterState_t *state, winterObject_t *dest, const winterObject_t *a) {
 	if (a->type == TYPE_INT) {
 		dest->type = TYPE_INT;
 		dest->integer = -a->integer;
@@ -151,7 +184,7 @@ bool_t _winter_objectNegate(winterObject_t *dest, const winterObject_t *a) {
 	return false;
 }
 
-bool_t _winter_objectNot(winterObject_t *dest, const winterObject_t *a) {
+bool_t _winter_objectNot(winterState_t *state, winterObject_t *dest, const winterObject_t *a) {
 	if (a->type == TYPE_INT || a->type == TYPE_FLOAT) {
 		dest->type = TYPE_INT;
 		dest->integer = !a->integer;
@@ -161,20 +194,19 @@ bool_t _winter_objectNot(winterObject_t *dest, const winterObject_t *a) {
 	return false;
 }
 
-bool_t _winter_objectEqual(winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
+bool_t _winter_objectEqual(winterState_t *state, winterObject_t *dest, const winterObject_t *a, const winterObject_t *b) {
 	dest->type = TYPE_INT;
 	dest->integer = a->integer == b->integer;
 	return true;
 }
 
-bool_t _winter_objectAssign(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
-	//TODO: reference counting
-	*dest = *a = *b;
+bool_t _winter_objectAssign(winterState_t *state, winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	*dest = *_winter_objectDelRef(state, a) = *_winter_objectAddRef(state, b);
 	return true;
 }
 
-bool_t _winter_objectAddEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
-	bool_t result = _winter_objectAdd(a, a, b);
+bool_t _winter_objectAddEq(winterState_t *state, winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	bool_t result = _winter_objectAdd(state, a, a, b);
 	if (result) {
 		*dest = *a;
 		return true;
@@ -182,8 +214,8 @@ bool_t _winter_objectAddEq(winterObject_t *dest, winterObject_t *a, const winter
 	return false;
 }
 
-bool_t _winter_objectMinEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
-	bool_t result = _winter_objectSub(a, a, b);
+bool_t _winter_objectMinEq(winterState_t *state, winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	bool_t result = _winter_objectSub(state, a, a, b);
 	if (result) {
 		*dest = *a;
 		return true;
@@ -191,8 +223,8 @@ bool_t _winter_objectMinEq(winterObject_t *dest, winterObject_t *a, const winter
 	return false;
 }
 
-bool_t _winter_objectMulEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
-	bool_t result = _winter_objectMul(a, a, b);
+bool_t _winter_objectMulEq(winterState_t *state, winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	bool_t result = _winter_objectMul(state, a, a, b);
 	if (result) {
 		*dest = *a;
 		return true;
@@ -200,8 +232,8 @@ bool_t _winter_objectMulEq(winterObject_t *dest, winterObject_t *a, const winter
 	return false;
 }
 
-bool_t _winter_objectDivEq(winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
-	bool_t result = _winter_objectDiv(a, a, b);
+bool_t _winter_objectDivEq(winterState_t *state, winterObject_t *dest, winterObject_t *a, const winterObject_t *b) {
+	bool_t result = _winter_objectDiv(state, a, a, b);
 	if (result) {
 		*dest = *a;
 		return true;
@@ -209,7 +241,7 @@ bool_t _winter_objectDivEq(winterObject_t *dest, winterObject_t *a, const winter
 	return false;
 }
 
-bool_t _winter_objectPreInc(winterObject_t *dest, winterObject_t *a) {
+bool_t _winter_objectPreInc(winterState_t *state, winterObject_t *dest, winterObject_t *a) {
 	if (a->type == TYPE_INT) {
 		dest->type = TYPE_INT;
 		dest->integer = ++a->integer;
@@ -223,7 +255,7 @@ bool_t _winter_objectPreInc(winterObject_t *dest, winterObject_t *a) {
 	return false;
 }
 
-bool_t _winter_objectPreDec(winterObject_t *dest, winterObject_t *a) {
+bool_t _winter_objectPreDec(winterState_t *state, winterObject_t *dest, winterObject_t *a) {
 	if (a->type == TYPE_INT) {
 		dest->type = TYPE_INT;
 		dest->integer = --a->integer;
