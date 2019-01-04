@@ -8,6 +8,7 @@
 #ifndef WINTER_H
 #define WINTER_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 //Primitive types

@@ -12,7 +12,7 @@ int allocations, frees;
 
 void *allocator(void *pointer, size_t newSize) {
 	if (newSize) {
-		// printf("Allocated %I64i bytes\n", newSize);
+		// printf("Allocated %lli bytes\n", newSize);
 		if (pointer == NULL) {
 			allocations++;
 		}
@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
 							printf("null\n");
 							break;
 						case TYPE_INT:
-							printf("%I64i\n", object->integer);
+							printf("%lli\n", object->integer);
 							break;
 						case TYPE_FLOAT:
 							printf("%f\n", object->floating);
