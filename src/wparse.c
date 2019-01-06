@@ -99,6 +99,7 @@ static ast_node_t *createNode(winterState_t *state, const token_t *token) {
 	return ret;
 }
 
+//TODO: handle reference counted object
 static void freeTree(winterState_t *state, ast_node_t *tree) {
 	if (tree) {
 		for (int i = 0; i < tree->numNodes; i++) {
@@ -203,12 +204,19 @@ ast_node_t *_winter_parseExpression(winterState_t *state, lexState_t *lex) {
 	return top;
 }
 
+//TODO: rewrite this function to better handle errors
 static ast_node_t *declareVar(winterState_t *state, lexState_t *lex) {
 	if (lex->lookahead.type == TK_VAR) {
 		_winter_nextToken(state, lex);
 		ast_node_t *ret = allocNode(state, 0);
 		ret->type = TK_VAR;
-		while (lex->lookahead.type == TK_IDENT) {
+		do {
+			if (lex->lookahead.type != TK_IDENT) {
+				//invalid expression
+				_winter_stateError(state, "expected identifier");
+				freeTree(state, ret);
+				return NULL;
+			}
 			_winter_nextToken(state, lex);
 			
 			ret = resizeNode(state, ret, ret->numNodes + 1);
@@ -217,7 +225,7 @@ static ast_node_t *declareVar(winterState_t *state, lexState_t *lex) {
 			
 			switch (lex->lookahead.type) {
 				case TK_SEMICOLON:
-					_winter_nextToken(state, lex);
+					// _winter_nextToken(state, lex);
 					return ret;
 				case TK_COMMA:
 					_winter_nextToken(state, lex);
@@ -228,13 +236,24 @@ static ast_node_t *declareVar(winterState_t *state, lexState_t *lex) {
 					assign->nodes[0] = ident;
 					assign->nodes[1] = _winter_parseExpression(state, lex);
 					ret->nodes[ret->numNodes - 1] = assign;
-					// _winter_nextToken(state, lex);
-					continue;
-				default: return NULL;
+					if (lex->lookahead.type == TK_COMMA) {
+						_winter_nextToken(state, lex);
+						continue;
+					} else if (lex->lookahead.type == TK_SEMICOLON) {
+						return ret;
+					} else {
+						_winter_stateError(state, "expected semicolon");
+						freeTree(state, ret);
+						return NULL;
+					}
+				}
+				default: {
+					_winter_stateError(state, "unexpected token");
+					freeTree(state, ret);
+					return NULL;
 				}
 			}
-		}
-		return ret;
+		} while (true);
 	}
 	return NULL;
 }
@@ -315,21 +334,31 @@ ast_node_t *execute(winterState_t *state, ast_node_t *tree) {
 				_winter_tableInsert(state, &state->globalState, tree->nodes[i]->value.string, NULL);
 				FREE(tree->nodes[i]->value.string);
 			} else if (tree->nodes[i]->type == TK_ASSIGN) {
-				ast_node_t *left = tree->nodes[i]->nodes[0];
-				ast_node_t *right = execute(state, tree->nodes[i]->nodes[1]);
-				if (right == NULL) {
+				ast_node_t *nodes = tree->nodes[i];
+				nodes->nodes[0] = nodes->nodes[0];
+				nodes->nodes[1] = execute(state, nodes->nodes[1]);
+				
+				if (nodes->nodes[1] == NULL) {
 					//error, back out
+					_winter_stringFree(state, nodes->nodes[0]->value.string);
+					freeTree(state, tree);
 					return NULL;
 				}
-				_winter_tableInsert(state, &state->globalState, left->value.string, &right->value);
-				FREE(left->value.string);
-				FREE(left);
-				FREE(right);
+				
+				winterObject_t *expr = &nodes->nodes[1]->value;
+				if (expr->type == TYPE_REF) {
+					expr = expr->pointer;
+				}
+				
+				_winter_tableInsert(state, &state->globalState, nodes->nodes[0]->value.string, expr);
+				_winter_stringFree(state, nodes->nodes[0]->value.string);
+				FREE(nodes->nodes[0]);
+				FREE(nodes->nodes[1]);
 			}
 			FREE(tree->nodes[i]);
 		}
 		tree->type = TK_VALUE;
-		tree->value = nullObject;
+		tree->value = (winterObject_t){0};
 		tree->numNodes = 0;
 	} else if (tree && isOperator(tree->type)) {
 		// ast_node_t *branches[2]; //hard coded for the moment

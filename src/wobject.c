@@ -25,7 +25,6 @@ winterObject_t *_winter_objectDelRef(winterState_t *state, winterObject_t *objec
 	if (isRefCounted(object->type)) {
 		refcounted_t *obj = object->pointer;
 		obj->refcount--;
-		printf("deleted reference\n");
 		if (obj->refcount <= 0) {
 			switch (object->type) {
 				case TYPE_TABLE:

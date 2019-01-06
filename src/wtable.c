@@ -90,9 +90,7 @@ void _winter_tableInsert(winterState_t *state, winterTable_t *table, winterStrin
 
 winterObject_t *_winter_tableGetObject(winterTable_t *table, winterString_t *string) {
 	bucket_t *bucket = getBucket(table, string);
-	printf("finding thing: %s\n", string->string);
 	if (bucket != NULL) {
-		printf("found!\n");
 		return &bucket->object;
 	} else {
 		return NULL;

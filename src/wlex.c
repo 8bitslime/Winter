@@ -297,7 +297,6 @@ size_t _winter_nextToken(winterState_t *state, lexState_t *lex) {
 		} break;
 		
 		case TK_IDENT: {
-			printf("identifier length: %i\n", size);
 			lex->lookahead.value.string = _winter_stringCreateLength(state, cursor, size);
 		} break;
 		

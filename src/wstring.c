@@ -66,6 +66,5 @@ bool_t _winter_stringCmp(winterString_t *s1, winterString_t *s2) {
 }
 
 void _winter_stringFree(winterState_t *state, winterString_t *string) {
-	printf("freeing \"%s\"\n", string->string);
 	FREE(string);
 }
