@@ -16,11 +16,11 @@ typedef int64_t winterInt_t;
 typedef double  winterFloat_t;
 
 //Allocator function (behaves like realloc)
-typedef void * (*winterAllocator_t)(void *pointer, size_t newSize);
+typedef void *(*winterAlloc_t)(void *pointer, size_t size);
 
 //Winter State
 typedef struct winterState_t winterState_t;
-winterState_t *winterCreateState(winterAllocator_t allocator);
+winterState_t *winterCreateState(winterAlloc_t allocator);
 void           winterFreeState(winterState_t *state);
 
 #endif

@@ -4,19 +4,13 @@ project(winter VERSION 0.0.1 LANGUAGES C)
 set(CMAKE_BUILD_TYPE DEBUG)
 
 set(WINTER_SOURCES
-	src/wlex.c
-	src/wobject.c
-	src/wparse.c
-	src/wstate.c
-	src/wstring.c
-	src/wtable.c
-	src/test.c
+	src/lexer.c
 )
-include_directories(./include)
 
 if (NOT MSVC)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -pedantic")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -pedantic")
 endif()
 
 add_executable(${PROJECT_NAME} ${WINTER_SOURCES})
+target_include_directories(${PROJECT_NAME} INHERITED ./include)
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 11)
