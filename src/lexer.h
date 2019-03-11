@@ -5,9 +5,18 @@
 
 typedef enum token_type_t {
 	TK_UNKNOWN = 0,
+	//Single character symbols just use their ascii value
 	TK_EOF = 128,
-	TK_IDENT,
-	TK_FOR
+	TK_IDENT, TK_INT, TK_FLOAT,
+	TK_FOR, TK_DO, TK_WHILE, TK_ELSE,
+	TK_LSHIFTEQ, TK_RSHIFTEQ,
+	TK_INC, TK_DEC, TK_POW,
+	TK_ADDEQ, TK_SUBEQ, TK_MULEQ, TK_DIVEQ, TK_MODEQ,
+	TK_OR, TK_AND,
+	TK_OREQ, TK_ANDEQ, TK_XOREQ,
+	TK_LSHIFT, TK_RSHIFT,
+	TK_NOTEQ, TK_LEQ, TK_GEQ, TK_EQ
+	
 } token_type_t;
 
 typedef struct cursor_t {

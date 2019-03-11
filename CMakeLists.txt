@@ -5,6 +5,7 @@ set(CMAKE_BUILD_TYPE DEBUG)
 
 set(WINTER_SOURCES
 	src/lexer.c
+	src/test.c
 )
 
 if (NOT MSVC)
@@ -12,5 +13,5 @@ if (NOT MSVC)
 endif()
 
 add_executable(${PROJECT_NAME} ${WINTER_SOURCES})
-target_include_directories(${PROJECT_NAME} INHERITED ./include)
+target_include_directories(${PROJECT_NAME} PUBLIC ./include)
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 11)
