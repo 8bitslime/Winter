@@ -11,18 +11,31 @@
 #define isAlnum(c)  (isAlpha(c) || isNumber(c))
 #define isHex(c)    (isNumber(c) || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F'))
 
-static size_t skipComments(lexState_t *lex) {
-	
+static bool_t skipComments(lexState_t *lex) {
+	if (STRING[0] == '/') {
+		if (STRING[1] == '/') {
+			while (*STRING != '\n') {
+				lex->cursor.pos++;
+				lex->cursor.carrot++;
+			}
+		} //else if (STRING[1] == '*') {
+			
+		// }
+		return true;
+	}
+	return false;
 }
 static void skipWhitespace(lexState_t *lex) {
-	while(*STRING && isSpace(*STRING)) {
-		lex->cursor.carrot++;
-		if (*STRING == '\n') {
-			lex->cursor.line++;
-			lex->cursor.carrot = 0;
+	do {
+		while(*STRING && isSpace(*STRING)) {
+			lex->cursor.carrot++;
+			if (*STRING == '\n') {
+				lex->cursor.line++;
+				lex->cursor.carrot = 0;
+			}
+			lex->cursor.pos++;
 		}
-		lex->cursor.pos++;
-	}
+	} while (skipComments(lex));
 }
 
 //TODO: better lookup data structure
@@ -104,6 +117,19 @@ static size_t lexNumber(lexState_t *lex) {
 	return size;
 }
 
+static size_t lexString(lexState_t *lex) {
+	size_t size = 0;
+	if (STRING[size] == '"') {
+		size = 1;
+		while(STRING[size] && STRING[size++] != '"') {
+			if (STRING[size] == '\\') size++;
+		}
+		lex->lookahead.size = size;
+		lex->lookahead.type = TK_STRING;
+	}
+	return size;
+}
+
 static size_t lexIdent(lexState_t *lex) {
 	size_t size = 0;
 	if (isAlpha(STRING[size]) || STRING[size] == '_') {
@@ -125,7 +151,7 @@ int _winter_lexNext(lexState_t *lex) {
 	
 	if (*STRING != '\0') {
 		
-		if (!(lexKeyword(lex) || lexIdent(lex) || lexNumber(lex) || lexSymbol(lex))) {
+		if (!(lexKeyword(lex) || lexIdent(lex) || lexNumber(lex) || lexString(lex) || lexSymbol(lex))) {
 			lex->lookahead.type = TK_UNKNOWN;
 			lex->lookahead.size = 1;
 		}

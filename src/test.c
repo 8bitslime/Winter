@@ -4,13 +4,23 @@
 
 int main(int argc, char **argv) {
 	lexState_t lex = {
-		"simple test case for whileloop"
+		"simple ////test\n  \ncase\nfor \"hello world\" while loop"
 	}; _winter_lexNext(&lex);
 	
 	while (_winter_lexNext(&lex)) {
 		switch (lex.current.type) {
 			case TK_IDENT:
 				printf("ident: '%.*s'", (int)lex.current.size, lex.string + lex.current.cursor.pos);
+				break;
+			case TK_STRING:
+				printf("string: %.*s", (int)lex.current.size, lex.string + lex.current.cursor.pos);
+				break;
+			case TK_FOR:
+			case TK_DO:
+			case TK_WHILE:
+			case TK_IF:
+			case TK_ELSE:
+				printf("keyword: %.*s", (int)lex.current.size, lex.string + lex.current.cursor.pos);
 				break;
 			case TK_INT:
 				printf("int: %.*s", (int)lex.current.size, lex.string + lex.current.cursor.pos);
