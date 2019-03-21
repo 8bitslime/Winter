@@ -4,7 +4,7 @@
 
 int main(int argc, char **argv) {
 	lexState_t lex = {
-		"simple ////test\n  \ncase\nfor \"hello world\" while loop"
+		"'\\n'"
 	}; _winter_lexNext(&lex);
 	
 	while (_winter_lexNext(&lex)) {
@@ -23,10 +23,10 @@ int main(int argc, char **argv) {
 				printf("keyword: %.*s", (int)lex.current.size, lex.string + lex.current.cursor.pos);
 				break;
 			case TK_INT:
-				printf("int: %.*s", (int)lex.current.size, lex.string + lex.current.cursor.pos);
+				printf("int: %llu", lex.current.integer);
 				break;
 			case TK_FLOAT:
-				printf("float: %.*s", (int)lex.current.size, lex.string + lex.current.cursor.pos);
+				printf("float: %f", lex.current.floating);
 				break;
 			case TK_UNKNOWN:
 				printf("unknown");

@@ -27,6 +27,11 @@ typedef struct token_t {
 	token_type_t type;
 	cursor_t cursor;
 	size_t size;
+	union {
+		winterInt_t integer;
+		winterFloat_t floating;
+		void *pointer;
+	};
 } token_t;
 
 typedef struct lexState_t {
