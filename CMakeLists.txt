@@ -5,6 +5,8 @@ set(CMAKE_BUILD_TYPE DEBUG)
 
 set(WINTER_SOURCES
 	src/lexer.c
+	src/parser.c
+	src/winter.c
 	src/test.c
 )
 

@@ -3,6 +3,15 @@
 
 #include "winter.h"
 
+#define isOperator(t) (((t) >= TK_LSHIFTEQ || (t) <= TK_EQ)   || \
+					  ((t) == '=' || (t) == '+' || (t) == '-' || \
+					  (t) == '*' || (t) == '/' || (t) == '%'  || \
+					  (t) == '<' || (t) == '>' || (t) == '&'  || \
+					  (t) == '|' || (t) == '!' || (t) == '^'  || \
+					  (t) == '~'))
+
+#define isExpression(t) ((t) >= TK_IDENT || (t) <= TK_STRING)
+
 typedef enum token_type_t {
 	TK_UNKNOWN = 0,
 	//Single character symbols just use their ascii value
