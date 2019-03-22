@@ -1,7 +1,6 @@
 #include "lexer.h"
 #include "wtype.h"
 #include <string.h>
-#include <stdlib.h>
 
 #define STRING (lex->string + lex->cursor.pos)
 #define LENGTH(a) (sizeof(a) / sizeof(*(a)))
@@ -11,9 +10,10 @@
 #define isNumber(c) ((c) >= '0' && (c) <= '9')
 #define isAlnum(c)  (isAlpha(c) || isNumber(c))
 #define isHex(c)    (isNumber(c) || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F'))
+#define isOctal(c)  ((c) >= '0' && (c) <= '7')
 #define isBinary(c) ((c) == '0' || (c) == '1')
 
-static bool_t skipComments(lexState_t *lex) {
+static inline bool_t skipComments(lexState_t *lex) {
 	if (STRING[0] == '/') {
 		if (STRING[1] == '/') {
 			while (*STRING != '\n') {
@@ -27,7 +27,7 @@ static bool_t skipComments(lexState_t *lex) {
 	}
 	return false;
 }
-static void skipWhitespace(lexState_t *lex) {
+static inline void skipWhitespace(lexState_t *lex) {
 	do {
 		while(*STRING && isSpace(*STRING)) {
 			lex->cursor.carrot++;
@@ -45,7 +45,7 @@ static const char *keywords[] = {
 	"for", "do", "while", "if", "else"
 };
 
-static size_t lexKeyword(lexState_t *lex) {
+static inline size_t lexKeyword(lexState_t *lex) {
 	lex->lookahead.size = 0;
 	for (size_t i = 0; i < LENGTH(keywords); i++) {
 		size_t length = strlen(keywords[i]);
@@ -67,7 +67,7 @@ const char *symbol2[] = {
 	"!=", "<=", ">=", "=="
 };
 const char symbols[] = ".,=+-*/%;<>(){}[]&|!^~";
-static size_t lexSymbol(lexState_t *lex) {
+static inline size_t lexSymbol(lexState_t *lex) {
 	for (size_t i = 0; i < LENGTH(symbol3); i++) {
 		if (strncmp(STRING, symbol3[i], 3) == 0) {
 			lex->lookahead.size = 3;
@@ -95,34 +95,72 @@ static size_t lexSymbol(lexState_t *lex) {
 	return 0;
 }
 
-static winterInt_t strtob(const char *binary) {
+static inline winterInt_t win_strtoll(const char *number, int base) {
 	winterInt_t out = 0;
-	if (binary[0] == '0' && (binary[1] == 'b' || binary[1] == 'B')) {
-		binary += 2;
-		while (isBinary(*binary)) {
-			out <<= 1;
-			out |= (*binary - '0');
-			binary++;
-		}
+	switch(base) {
+		case 2:
+		case 8:
+		case 10:
+			while (isNumber(*number)) {
+				out *= base;
+				out += *number - '0';
+				number++;
+			}
+			break;
+		case 16:
+			while (isHex(*number)) {
+				out *= base;
+				if (*number >= 'a')
+					out += *number - 'a' + 10;
+				else if (*number >= 'A')
+					out += *number - 'A' + 10;
+				else
+					out += *number - '0';
+				number++;
+			}
+			break;
 	}
 	return out;
 }
 
-static size_t lexNumber(lexState_t *lex) {
+static inline winterFloat_t win_strtod(const char *number) {
+	winterFloat_t out = 0;
+	winterFloat_t divisor = 1;
+	
+	while (isNumber(*number)) {
+		out *= 10;
+		out += *number - '0';
+		number++;
+	}
+	number++;
+	while (isNumber(*number)) {
+		divisor /= 10.0;
+		out += (winterFloat_t)(*number - '0') * divisor;
+		number++;
+	}
+	
+	return out;
+}
+
+static inline size_t lexNumber(lexState_t *lex) {
 	size_t size = 0;
 	if (isNumber(STRING[size])) {
 		lex->lookahead.type = TK_INT;
 		size = 1;
 		
-		//Check if it's a hex or binary literal
+		//Check if it's a hex, octal, or binary literal
 		if (STRING[0] == '0' && (STRING[1] == 'x' || STRING[1] == 'X') && isHex(STRING[2])) {
 			size = 3;
 			while (isHex(STRING[size])) size++;
-			lex->lookahead.integer = (winterInt_t)strtoll(lex->string + lex->cursor.pos, NULL, 0);
+			lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 2, 16);
 		} else if (STRING[0] == '0' && (STRING[1] == 'b' || STRING[1] == 'B') && isBinary(STRING[2])) {
 			size = 3;
-			while (STRING[size] == '0' || STRING[size] == '1') size++;
-			lex->lookahead.integer = strtob(lex->string + lex->cursor.pos);
+			while (isBinary(STRING[size])) size++;
+			lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 2, 2);
+		} else if (STRING[0] == '0' && isOctal(STRING[1])) {
+			size = 2;
+			while (isOctal(STRING[size])) size++;
+			lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 1, 8);
 		} else {
 			while (isNumber(STRING[size])) size++;
 			if (STRING[size] == '.') {
@@ -130,9 +168,9 @@ static size_t lexNumber(lexState_t *lex) {
 				do {
 					size++;
 				} while (isNumber(STRING[size]));
-				lex->lookahead.floating = (winterFloat_t)strtod(lex->string + lex->cursor.pos, NULL);
+				lex->lookahead.floating = win_strtod(lex->string + lex->cursor.pos);
 			} else {
-				lex->lookahead.integer = (winterInt_t)strtoll(lex->string + lex->cursor.pos, NULL, 0);
+				lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos, 10);
 			}
 		}
 	}
@@ -140,7 +178,7 @@ static size_t lexNumber(lexState_t *lex) {
 	return size;
 }
 
-static size_t lexString(lexState_t *lex) {
+static inline size_t lexString(lexState_t *lex) {
 	size_t size = 0;
 	if (STRING[size] == '"') {
 		size = 1;
@@ -153,7 +191,7 @@ static size_t lexString(lexState_t *lex) {
 	return size;
 }
 
-static size_t lexChar(lexState_t *lex) {
+static inline size_t lexChar(lexState_t *lex) {
 	size_t size = 0;
 	if (STRING[0] == '\'') {
 		lex->lookahead.type = TK_INT;
@@ -166,7 +204,7 @@ static size_t lexChar(lexState_t *lex) {
 					size = 0;
 				} else {
 					size++;
-					lex->lookahead.integer = (winterInt_t)strtoll(lex->string + lex->cursor.pos + 2, NULL, 8);
+					lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 2, 8);
 				}
 			}
 			if ((STRING[2] == 'x' || STRING[2] == 'X') && isHex(STRING[3])) {
@@ -176,7 +214,7 @@ static size_t lexChar(lexState_t *lex) {
 					size = 0;
 				} else {
 					size++;
-					lex->lookahead.integer = (winterInt_t)strtoll(lex->string + lex->cursor.pos + 3, NULL, 16);
+					lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 3, 16);
 				}
 			} else if (STRING[3] == '\'') {
 				size = 4;
@@ -220,7 +258,7 @@ static size_t lexChar(lexState_t *lex) {
 	return size;
 }
 
-static size_t lexIdent(lexState_t *lex) {
+static inline size_t lexIdent(lexState_t *lex) {
 	size_t size = 0;
 	if (isAlpha(STRING[size]) || STRING[size] == '_') {
 		size = 1;
@@ -241,7 +279,13 @@ int _winter_lexNext(lexState_t *lex) {
 	
 	if (*STRING != '\0') {
 		
-		if (!(lexKeyword(lex) || lexIdent(lex) || lexNumber(lex) || lexString(lex) || lexChar(lex) || lexSymbol(lex))) {
+		if (!(lexIdent(lex) ||
+			lexNumber(lex)  ||
+			lexString(lex)  ||
+			lexChar(lex)    ||
+			lexKeyword(lex) ||
+			lexSymbol(lex))) {
+			//No parseable token, return unknown
 			lex->lookahead.type = TK_UNKNOWN;
 			lex->lookahead.size = 1;
 		}

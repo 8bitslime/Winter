@@ -4,7 +4,7 @@
 
 int main(int argc, char **argv) {
 	lexState_t lex = {
-		"'\\n'"
+		"'\\xFF'"
 	}; _winter_lexNext(&lex);
 	
 	while (_winter_lexNext(&lex)) {
