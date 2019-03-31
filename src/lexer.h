@@ -3,14 +3,14 @@
 
 #include "winter.h"
 
-#define isOperator(t) (((t) >= TK_LSHIFTEQ || (t) <= TK_EQ)   || \
+#define isOperator(t) (((token_type_t)(t) >= TK_LSHIFTEQ && (token_type_t)(t) <= TK_EQ)   || \
 					  ((t) == '=' || (t) == '+' || (t) == '-' || \
 					  (t) == '*' || (t) == '/' || (t) == '%'  || \
 					  (t) == '<' || (t) == '>' || (t) == '&'  || \
 					  (t) == '|' || (t) == '!' || (t) == '^'  || \
 					  (t) == '~'))
 
-#define isExpression(t) ((t) >= TK_IDENT || (t) <= TK_STRING)
+#define isExpression(t) ((token_type_t)(t) >= TK_IDENT && (token_type_t)(t) <= TK_STRING)
 
 typedef enum token_type_t {
 	TK_UNKNOWN = 0,

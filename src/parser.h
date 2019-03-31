@@ -15,6 +15,7 @@ typedef enum ast_node_type_t {
 	
 	AST_IDENT = TK_IDENT,
 	AST_VALUE,
+	
 	AST_FOR = TK_FOR,
 	
 	AST_LSHIFTEQ = TK_LSHIFTEQ, AST_RSHIFTEQ = TK_RSHIFTEQ,

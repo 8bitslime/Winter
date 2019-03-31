@@ -157,8 +157,8 @@ static inline size_t lexNumber(lexState_t *lex) {
 			size = 3;
 			while (isBinary(STRING[size])) size++;
 			lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 2, 2);
-		} else if (STRING[0] == '0' && isOctal(STRING[1])) {
-			size = 2;
+		} else if (STRING[0] == '0') {
+			size = 1;
 			while (isOctal(STRING[size])) size++;
 			lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 1, 8);
 		} else {
