@@ -5,6 +5,18 @@
 #include "lexer.h"
 #include <stddef.h>
 
+#define isOperator(t) (((token_type_t)(t) >= TK_LSHIFTEQ && (token_type_t)(t) <= TK_EQ)   || \
+					  ((t) == '=' || (t) == '+' || (t) == '-' || \
+					  (t) == '*' || (t) == '/' || (t) == '%'  || \
+					  (t) == '<' || (t) == '>' || (t) == '&'  || \
+					  (t) == '|' || (t) == '!' || (t) == '^'  || \
+					  (t) == '~') || (ast_node_type_t)(t) == AST_NEGATE)
+					  
+#define isUnarySymbol(t)   ((t) == '-' || (t) == '!')
+#define isUnary(t) ((t) == AST_NOT || (t) == AST_NEGATE)
+
+#define isExpression(t) ((token_type_t)(t) >= TK_IDENT && (token_type_t)(t) <= TK_STRING)
+
 typedef enum ast_node_type_t {
 	AST_ASSIGN = '=',
 	AST_ADD = '+', AST_SUB = '-',
@@ -26,7 +38,9 @@ typedef enum ast_node_type_t {
 	AST_OR = TK_OR, AST_AND = TK_AND,
 	AST_OREQ = TK_OREQ, AST_ANDew = TK_ANDEQ, AST_XOREQ = TK_XOREQ,
 	AST_LSHIFT = TK_LSHIFT, AST_RSHIFT = TK_RSHIFT,
-	AST_NOTEQ = TK_NOTEQ, AST_LEQ = TK_LEQ, AST_GEQ = TK_GEQ, AST_EQ = TK_EQ
+	AST_NOTEQ = TK_NOTEQ, AST_LEQ = TK_LEQ, AST_GEQ = TK_GEQ, AST_EQ = TK_EQ,
+	
+	AST_NEGATE
 } ast_node_type_t;
 
 typedef struct ast_node_t {

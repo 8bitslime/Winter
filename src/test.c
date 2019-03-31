@@ -17,7 +17,10 @@ void * allocator(void *ptr, size_t size) {
 ast_node_t *walkTree(ast_node_t *node) {
 	if (isOperator(node->type)) {
 		ast_node_t *left  = walkTree(node->children[0]);
-		ast_node_t *right = walkTree(node->children[1]);
+		ast_node_t *right = NULL;
+		if (!isUnary(node->type)) {
+			right = walkTree(node->children[1]);
+		}
 		switch (node->type) {
 			case AST_ADD:
 				node->value = left->value + right->value;
@@ -36,6 +39,12 @@ ast_node_t *walkTree(ast_node_t *node) {
 				for (int i = right->value; i > 1; i--) {
 					node->value *= left->value;
 				}
+				break;
+			case AST_NEGATE:
+				node->value = -left->value;
+				break;
+			case AST_NOT:
+				node->value = !left->value;
 				break;
 			default: break;
 		}

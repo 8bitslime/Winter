@@ -1,6 +1,8 @@
 #include "parser.h"
 #include "wtype.h"
 
+#include <stdio.h>
+
 //creates or resizes a node
 static ast_node_t *allocNode(winterState_t *state, ast_node_t *node, size_t size) {
 	ast_node_t *ret = state->allocator(NULL, sizeof(ast_node_t) + sizeof(ast_node_t*) * size);
@@ -18,9 +20,13 @@ static ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
 	return ret;
 }
 
-static ast_node_t *createOprNode(winterState_t *state, const token_t *token) {
-	ast_node_t *ret = allocNode(state, NULL, 2);
-	ret->type = token->type;
+static ast_node_t *createOprNode(winterState_t *state, ast_node_type_t type) {
+	size_t size = 2;
+	if (isUnary(type)) {
+		size = 1;
+	}
+	ast_node_t *ret = allocNode(state, NULL, size);
+	ret->type = type;
 	return ret;
 }
 
@@ -55,24 +61,40 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 		if (expect == expression) {
 			//expression
 			if (isExpression(token->type)) {
+				//Add expression to bottom of tree
 				ast_node_t *node = createEprNode(state, token);
 				if (tree == NULL) {
 					tree = node;
-					tail = tree;
 				} else {
-					tail->children[1] = node;
+					tail->children[tail->numNodes - 1] = node;
 				}
 				expect = operator;
+			} else if (isUnarySymbol(token->type)) {
+				//Add unary operator
+				//TODO: unary precedence
+				if (token->type == '-') {
+					token->type = AST_NEGATE;
+				}
+				ast_node_t *node = createOprNode(state, token->type);
+				if (tree == NULL) {
+					tree = node;
+				} else {
+					tail->children[tail->numNodes - 1] = node;
+				}
+				tail = node;
+				//Don't change expect because we still want an expression next
+				
 			} else {
 				//TODO: error handling and unary operators
 				printf("expected expression\n");
 				return NULL;
+				//Eventually going to make an error type node to return
 			}
+			
 		} else {
 			//operator
 			if (isOperator(token->type)) {
-				ast_node_t *node = createOprNode(state, token);
-				
+				ast_node_t *node = createOprNode(state, token->type);
 				int priority = precedence(node->type);
 				
 				//operator precedence in place
@@ -81,6 +103,7 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 					tree = node;
 					tail = node;
 				} else {
+					//higher precedence goes down the tree
 					ast_node_t *walk = tree;
 					while (priority > precedence(walk->children[1]->type)) {
 						walk = walk->children[1];
