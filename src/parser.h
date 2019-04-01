@@ -10,12 +10,13 @@
 					  (t) == '*' || (t) == '/' || (t) == '%'  || \
 					  (t) == '<' || (t) == '>' || (t) == '&'  || \
 					  (t) == '|' || (t) == '!' || (t) == '^'  || \
-					  (t) == '~') || (ast_node_type_t)(t) == AST_NEGATE)
+					  (t) == '~') || \
+					  (ast_node_type_t)(t) == AST_NEGATE || (ast_node_type_t)(t) == AST_PASS)
 					  
 #define isUnarySymbol(t)   ((t) == '-' || (t) == '!')
 #define isUnary(t) ((t) == AST_NOT || (t) == AST_NEGATE)
 
-#define isExpression(t) ((token_type_t)(t) >= TK_IDENT && (token_type_t)(t) <= TK_STRING)
+#define isExpression(t) ((t) == '(' || ((token_type_t)(t) >= TK_IDENT && (token_type_t)(t) <= TK_STRING)) 
 
 typedef enum ast_node_type_t {
 	AST_ASSIGN = '=',
@@ -24,6 +25,9 @@ typedef enum ast_node_type_t {
 	AST_LESS = '<', AST_GREATER = '>',
 	AST_BITAND = '&', AST_BITOR = '|', AST_NOT = '!',
 	AST_BITXOR = '^', AST_BITNOT = '~',
+	
+	//Simply passes the value through, needed for some precedence
+	AST_PASS,
 	
 	AST_IDENT = TK_IDENT,
 	AST_VALUE,

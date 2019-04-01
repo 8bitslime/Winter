@@ -5,14 +5,6 @@
 #define STRING (lex->string + lex->cursor.pos)
 #define LENGTH(a) (sizeof(a) / sizeof(*(a)))
 
-#define isSpace(c)  ((c) == ' ' || (c) == '\t' || (c) == '\n' || (c) == '\v' || (c) == '\f' || (c) == '\r')
-#define isAlpha(c)  (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
-#define isNumber(c) ((c) >= '0' && (c) <= '9')
-#define isAlnum(c)  (isAlpha(c) || isNumber(c))
-#define isHex(c)    (isNumber(c) || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F'))
-#define isOctal(c)  ((c) >= '0' && (c) <= '7')
-#define isBinary(c) ((c) == '0' || (c) == '1')
-
 static inline bool_t skipComments(lexState_t *lex) {
 	if (STRING[0] == '/') {
 		if (STRING[1] == '/') {
@@ -20,10 +12,25 @@ static inline bool_t skipComments(lexState_t *lex) {
 				lex->cursor.pos++;
 				lex->cursor.carrot++;
 			}
-		} //else if (STRING[1] == '*') {
-			
-		// }
-		return true;
+			return true;
+		} else if (STRING[1] == '*') {
+			lex->cursor.pos++;
+			lex->cursor.carrot++;
+			while (*STRING) {
+				if (STRING[0] == '*' && STRING[1] == '/') {
+					lex->cursor.pos    += 2;
+					lex->cursor.carrot += 2;
+					break;
+				}
+				lex->cursor.pos++;
+				lex->cursor.carrot++;
+				if (*STRING == '\n') {
+					lex->cursor.line++;
+					lex->cursor.carrot = 0;
+				}
+			}
+			return true;
+		}
 	}
 	return false;
 }
@@ -95,72 +102,25 @@ static inline size_t lexSymbol(lexState_t *lex) {
 	return 0;
 }
 
-static inline winterInt_t win_strtoll(const char *number, int base) {
-	winterInt_t out = 0;
-	switch(base) {
-		case 2:
-		case 8:
-		case 10:
-			while (isNumber(*number)) {
-				out *= base;
-				out += *number - '0';
-				number++;
-			}
-			break;
-		case 16:
-			while (isHex(*number)) {
-				out *= base;
-				if (*number >= 'a')
-					out += *number - 'a' + 10;
-				else if (*number >= 'A')
-					out += *number - 'A' + 10;
-				else
-					out += *number - '0';
-				number++;
-			}
-			break;
-	}
-	return out;
-}
-
-static inline winterFloat_t win_strtod(const char *number) {
-	winterFloat_t out = 0;
-	winterFloat_t divisor = 1;
-	
-	while (isNumber(*number)) {
-		out *= 10;
-		out += *number - '0';
-		number++;
-	}
-	number++;
-	while (isNumber(*number)) {
-		divisor /= 10.0;
-		out += (winterFloat_t)(*number - '0') * divisor;
-		number++;
-	}
-	
-	return out;
-}
-
 static inline size_t lexNumber(lexState_t *lex) {
 	size_t size = 0;
 	if (isNumber(STRING[size])) {
-		lex->lookahead.type = TK_INT;
+		lex->lookahead.type = TK_DECIMAL;
 		size = 1;
 		
 		//Check if it's a hex, octal, or binary literal
 		if (STRING[0] == '0' && (STRING[1] == 'x' || STRING[1] == 'X') && isHex(STRING[2])) {
+			lex->lookahead.type = TK_HEX;
 			size = 3;
 			while (isHex(STRING[size])) size++;
-			lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 2, 16);
 		} else if (STRING[0] == '0' && (STRING[1] == 'b' || STRING[1] == 'B') && isBinary(STRING[2])) {
+			lex->lookahead.type = TK_BINARY;
 			size = 3;
 			while (isBinary(STRING[size])) size++;
-			lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 2, 2);
 		} else if (STRING[0] == '0') {
+			lex->lookahead.type = TK_OCTAL;
 			size = 1;
 			while (isOctal(STRING[size])) size++;
-			lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 1, 8);
 		} else {
 			while (isNumber(STRING[size])) size++;
 			if (STRING[size] == '.') {
@@ -168,9 +128,6 @@ static inline size_t lexNumber(lexState_t *lex) {
 				do {
 					size++;
 				} while (isNumber(STRING[size]));
-				lex->lookahead.floating = win_strtod(lex->string + lex->cursor.pos);
-			} else {
-				lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos, 10);
 			}
 		}
 	}
@@ -194,7 +151,7 @@ static inline size_t lexString(lexState_t *lex) {
 static inline size_t lexChar(lexState_t *lex) {
 	size_t size = 0;
 	if (STRING[0] == '\'') {
-		lex->lookahead.type = TK_INT;
+		lex->lookahead.type = TK_CHAR;
 		if (STRING[1] == '\\') {
 			//escape sequence
 			if (isNumber(STRING[2])) {
@@ -204,7 +161,6 @@ static inline size_t lexChar(lexState_t *lex) {
 					size = 0;
 				} else {
 					size++;
-					lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 2, 8);
 				}
 			}
 			if ((STRING[2] == 'x' || STRING[2] == 'X') && isHex(STRING[3])) {
@@ -214,44 +170,12 @@ static inline size_t lexChar(lexState_t *lex) {
 					size = 0;
 				} else {
 					size++;
-					lex->lookahead.integer = win_strtoll(lex->string + lex->cursor.pos + 3, 16);
 				}
 			} else if (STRING[3] == '\'') {
 				size = 4;
-				switch (STRING[2]) {
-					case 'a':
-						lex->lookahead.integer = '\a';
-						break;
-					case 'b':
-						lex->lookahead.integer = '\b';
-						break;
-					case 'e':
-						lex->lookahead.integer = 0x1B;
-						break;
-					case 'f':
-						lex->lookahead.integer = '\f';
-						break;
-					case 'n':
-						lex->lookahead.integer = '\n';
-						break;
-					case 'r':
-						lex->lookahead.integer = '\r';
-						break;
-					case 't':
-						lex->lookahead.integer = '\t';
-						break;
-					case 'v':
-						lex->lookahead.integer = '\v';
-						break;
-						
-					default:
-						lex->lookahead.integer = STRING[2];
-						break;
-				}
 			}
 		} else if (STRING[2] == '\'') {
 			size = 3;
-			lex->lookahead.integer = STRING[2];
 		}
 	}
 	lex->lookahead.size = size;
@@ -273,6 +197,7 @@ static inline size_t lexIdent(lexState_t *lex) {
 
 int _winter_lexNext(lexState_t *lex) {
 	skipWhitespace(lex);
+	lex->cursor.pointer = STRING;
 	
 	lex->current = lex->lookahead;
 	lex->lookahead.cursor = lex->cursor;

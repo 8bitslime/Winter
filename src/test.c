@@ -3,13 +3,23 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
-void * allocator(void *ptr, size_t size) {
+static int allocs = 0;
+static int frees  = 0;
+
+void *allocator(void *ptr, size_t size) {
 	void *ret = NULL;
 	if (size) {
+		if (ptr == NULL) {
+			allocs++;
+		}
 		ret = realloc(ptr, size);
 	} else {
-		free(ptr);
+		if (ptr != NULL) {
+			frees++;
+			free(ptr);
+		}
 	}
 	return ret;
 }
@@ -18,7 +28,7 @@ ast_node_t *walkTree(ast_node_t *node) {
 	if (isOperator(node->type)) {
 		ast_node_t *left  = walkTree(node->children[0]);
 		ast_node_t *right = NULL;
-		if (!isUnary(node->type)) {
+		if (node->numNodes == 2) {
 			right = walkTree(node->children[1]);
 		}
 		switch (node->type) {
@@ -35,16 +45,16 @@ ast_node_t *walkTree(ast_node_t *node) {
 				node->value = left->value / right->value;
 				break;
 			case AST_POW:
-				node->value = left->value;
-				for (int i = right->value; i > 1; i--) {
-					node->value *= left->value;
-				}
+				node->value = (int)(pow(left->value, right->value) + 0.5);
 				break;
 			case AST_NEGATE:
 				node->value = -left->value;
 				break;
 			case AST_NOT:
 				node->value = !left->value;
+				break;
+			case AST_PASS:
+				node->value = left->value;
 				break;
 			default: break;
 		}
@@ -60,7 +70,7 @@ int main(int argc, char **argv) {
 	winterState_t *state = winterCreateState(allocator);
 	char buffer[512] = {0};
 	
-	printf("Winter interpreter v0.1b\n");
+	printf("Winter interpreter v0.1\n");
 	
 	while (1) {
 		printf(">> ");
@@ -70,11 +80,15 @@ int main(int argc, char **argv) {
 		ast_node_t *node = _winter_generateTree(state, buffer);
 		if (node != NULL) {
 			node = walkTree(node);
+			printf("%i\n", node->value);
 		}
 		
-		printf("%i\n", node->value);
 		allocator(node, 0);
 	}
 	
 	winterFreeState(state);
+	
+	printf("allocations:  %i\n", allocs);
+	printf("frees:        %i\n", frees);
+	printf("difference:   %i\n", allocs - frees);
 }

@@ -11,12 +11,80 @@ static ast_node_t *allocNode(winterState_t *state, ast_node_t *node, size_t size
 	return ret;
 }
 
+static inline winterInt_t win_strtoll(const char *number, int base) {
+	winterInt_t out = 0;
+	switch(base) {
+		case 2:
+		case 8:
+		case 10:
+			while (isNumber(*number)) {
+				out *= base;
+				out += *number - '0';
+				number++;
+			}
+			break;
+		case 16:
+			while (isHex(*number)) {
+				out *= base;
+				if (*number >= 'a')
+					out += *number - 'a' + 10;
+				else if (*number >= 'A')
+					out += *number - 'A' + 10;
+				else
+					out += *number - '0';
+				number++;
+			}
+			break;
+	}
+	return out;
+}
+
+static inline winterFloat_t win_strtof(const char *number) {
+	winterFloat_t out = 0;
+	winterFloat_t divisor = 1;
+	
+	while (isNumber(*number)) {
+		out *= 10;
+		out += *number - '0';
+		number++;
+	}
+	number++;
+	while (isNumber(*number)) {
+		divisor /= 10.0;
+		out += (winterFloat_t)(*number - '0') * divisor;
+		number++;
+	}
+	
+	return out;
+}
+
 static ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
-	ast_node_t *ret = allocNode(state, NULL, 0);
-	ret->type = AST_VALUE;
+	size_t size = 0;
+	ast_node_type_t type = AST_VALUE;
+	if (token->type == '(') {
+		size = 1;
+		type = AST_PASS;
+	}
+	ast_node_t *ret = allocNode(state, NULL, size);
+	ret->type = type;
 	
 	//TODO: convert value to object
-	ret->value = token->integer;
+	switch(token->type) {
+		case TK_DECIMAL:
+			ret->value = win_strtoll(token->cursor.pointer, 10);
+			break;
+		case TK_HEX:
+			ret->value = win_strtoll(token->cursor.pointer + 2, 16);
+			break;
+		case TK_BINARY:
+			ret->value = win_strtoll(token->cursor.pointer + 2, 2);
+			break;
+		case TK_OCTAL:
+			ret->value = win_strtoll(token->cursor.pointer + 1, 8);
+			break;
+		default: break;
+	}
+	
 	return ret;
 }
 
@@ -62,7 +130,16 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 			//expression
 			if (isExpression(token->type)) {
 				//Add expression to bottom of tree
-				ast_node_t *node = createEprNode(state, token);
+				ast_node_t *node = createEprNode(state, token);				
+				
+				if (token->type == '(') {
+					node->children[0] = parseExpression(state, lex);
+					if (lex->current.type != ')') {
+						printf("expected closing parenthesis!\n");
+						return NULL;
+					}
+				}
+				
 				if (tree == NULL) {
 					tree = node;
 				} else {
@@ -86,7 +163,7 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 				
 			} else {
 				//TODO: error handling and unary operators
-				printf("expected expression\n");
+				printf("expected expression!\n");
 				return NULL;
 				//Eventually going to make an error type node to return
 			}
