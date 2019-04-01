@@ -1,6 +1,8 @@
 #ifndef WTYPE_H
 #define WTYPE_H
 
+#include "winter.h"
+
 typedef struct winterState_t {
 	winterAlloc_t allocator;
 } winterState_t;

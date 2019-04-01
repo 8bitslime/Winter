@@ -33,28 +33,28 @@ ast_node_t *walkTree(ast_node_t *node) {
 		}
 		switch (node->type) {
 			case AST_ADD:
-				node->value = left->value + right->value;
+				node->value.integer = left->value.integer + right->value.integer;
 				break;
 			case AST_SUB:
-				node->value = left->value - right->value;
+				node->value.integer = left->value.integer - right->value.integer;
 				break;
 			case AST_MUL:
-				node->value = left->value * right->value;
+				node->value.integer = left->value.integer * right->value.integer;
 				break;
 			case AST_DIV:
-				node->value = left->value / right->value;
+				node->value.integer = left->value.integer / right->value.integer;
 				break;
 			case AST_POW:
-				node->value = (int)(pow(left->value, right->value) + 0.5);
+				node->value.integer = (int)(pow(left->value.integer, right->value.integer) + 0.5);
 				break;
 			case AST_NEGATE:
-				node->value = -left->value;
+				node->value.integer = -left->value.integer;
 				break;
 			case AST_NOT:
-				node->value = !left->value;
+				node->value.integer = !left->value.integer;
 				break;
 			case AST_PASS:
-				node->value = left->value;
+				node->value.integer = left->value.integer;
 				break;
 			default: break;
 		}
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 		ast_node_t *node = _winter_generateTree(state, buffer);
 		if (node != NULL) {
 			node = walkTree(node);
-			printf("%i\n", node->value);
+			printf("%llu\n", node->value.integer);
 		}
 		
 		allocator(node, 0);

@@ -73,7 +73,7 @@ const char *symbol2[] = {
 	"<<", ">>",
 	"!=", "<=", ">=", "=="
 };
-const char symbols[] = ".,=+-*/%;<>(){}[]&|!^~";
+const char symbols[] = ".,=+-*/%<>&|!^~()[]{};";
 static inline size_t lexSymbol(lexState_t *lex) {
 	for (size_t i = 0; i < LENGTH(symbol3); i++) {
 		if (strncmp(STRING, symbol3[i], 3) == 0) {
@@ -94,7 +94,7 @@ static inline size_t lexSymbol(lexState_t *lex) {
 	for (size_t i = 0; i < LENGTH(symbols); i++) {
 		if (symbols[i] == STRING[0]) {
 			lex->lookahead.size = 1;
-			lex->lookahead.type = STRING[0];
+			lex->lookahead.type = TK_DOT + i;
 			return 1;
 		}
 	}

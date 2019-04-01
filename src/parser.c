@@ -61,7 +61,7 @@ static inline winterFloat_t win_strtof(const char *number) {
 static ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
 	size_t size = 0;
 	ast_node_type_t type = AST_VALUE;
-	if (token->type == '(') {
+	if (token->type == TK_LPAREN) {
 		size = 1;
 		type = AST_PASS;
 	}
@@ -71,16 +71,16 @@ static ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
 	//TODO: convert value to object
 	switch(token->type) {
 		case TK_DECIMAL:
-			ret->value = win_strtoll(token->cursor.pointer, 10);
+			ret->value.integer = win_strtoll(token->cursor.pointer, 10);
 			break;
 		case TK_HEX:
-			ret->value = win_strtoll(token->cursor.pointer + 2, 16);
+			ret->value.integer = win_strtoll(token->cursor.pointer + 2, 16);
 			break;
 		case TK_BINARY:
-			ret->value = win_strtoll(token->cursor.pointer + 2, 2);
+			ret->value.integer = win_strtoll(token->cursor.pointer + 2, 2);
 			break;
 		case TK_OCTAL:
-			ret->value = win_strtoll(token->cursor.pointer + 1, 8);
+			ret->value.integer = win_strtoll(token->cursor.pointer + 1, 8);
 			break;
 		default: break;
 	}
@@ -112,7 +112,7 @@ static int precedence(ast_node_type_t operator) {
 		
 		default: return 999;
 	}
-} 
+}
 
 static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex) {
 	ast_node_t *tree = NULL;
@@ -130,11 +130,12 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 			//expression
 			if (isExpression(token->type)) {
 				//Add expression to bottom of tree
-				ast_node_t *node = createEprNode(state, token);				
+				ast_node_t *node = createEprNode(state, token);
 				
-				if (token->type == '(') {
+				if (token->type == TK_LPAREN) {
+					//parenthesis parsing
 					node->children[0] = parseExpression(state, lex);
-					if (lex->current.type != ')') {
+					if (lex->current.type != TK_RPAREN) {
 						printf("expected closing parenthesis!\n");
 						return NULL;
 					}

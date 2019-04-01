@@ -5,13 +5,14 @@
 
 typedef enum token_type_t {
 	TK_UNKNOWN = 0,
-	//Single character symbols just use their ascii value
 	
 	//End of source file/text
-	TK_EOF = 128,
+	TK_EOF,
 	
 	//Identifier and literals
-	TK_IDENT, TK_DECIMAL, TK_HEX, TK_BINARY, TK_OCTAL, TK_CHAR, TK_FLOAT, TK_STRING,
+	TK_IDENT,
+	TK_DECIMAL, TK_HEX, TK_BINARY, TK_OCTAL,
+	TK_CHAR, TK_FLOAT, TK_STRING,
 	
 	//Keywords
 	TK_FOR, TK_DO, TK_WHILE, TK_IF, TK_ELSE,
@@ -23,7 +24,19 @@ typedef enum token_type_t {
 	TK_OR, TK_AND,
 	TK_OREQ, TK_ANDEQ, TK_XOREQ,
 	TK_LSHIFT, TK_RSHIFT,
-	TK_NOTEQ, TK_LEQ, TK_GEQ, TK_EQ
+	TK_NOTEQ, TK_LEQ, TK_GEQ, TK_EQ,
+	TK_DOT, TK_COMMA, TK_ASSIGN,
+	TK_ADD, TK_SUB,
+	TK_MUL, TK_DIV, TK_MOD,
+	TK_LESS, TK_GREATER,
+	TK_BITAND, TK_BITOR, TK_NOT,
+	TK_XOR, TK_BITNOT,
+	
+	//Symbols
+	TK_LPAREN, TK_RPAREN,
+	TK_LBRACKET, TK_RBRACKET,
+	TK_LCURLY, TK_RCURLY,
+	TK_SEMICOLON,
 } token_type_t;
 
 typedef struct cursor_t {
