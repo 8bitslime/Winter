@@ -11,80 +11,16 @@ static ast_node_t *allocNode(winterState_t *state, ast_node_t *node, size_t size
 	return ret;
 }
 
-static inline winterInt_t win_strtoll(const char *number, int base) {
-	winterInt_t out = 0;
-	switch(base) {
-		case 2:
-		case 8:
-		case 10:
-			while (isNumber(*number)) {
-				out *= base;
-				out += *number - '0';
-				number++;
-			}
-			break;
-		case 16:
-			while (isHex(*number)) {
-				out *= base;
-				if (*number >= 'a')
-					out += *number - 'a' + 10;
-				else if (*number >= 'A')
-					out += *number - 'A' + 10;
-				else
-					out += *number - '0';
-				number++;
-			}
-			break;
-	}
-	return out;
-}
-
-static inline winterFloat_t win_strtof(const char *number) {
-	winterFloat_t out = 0;
-	winterFloat_t divisor = 1;
-	
-	while (isNumber(*number)) {
-		out *= 10;
-		out += *number - '0';
-		number++;
-	}
-	number++;
-	while (isNumber(*number)) {
-		divisor /= 10.0;
-		out += (winterFloat_t)(*number - '0') * divisor;
-		number++;
-	}
-	
-	return out;
-}
-
 static ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
-	size_t size = 0;
-	ast_node_type_t type = AST_VALUE;
+	ast_node_t *ret;
 	if (token->type == TK_LPAREN) {
-		size = 1;
-		type = AST_PASS;
+		ret = allocNode(state, NULL, 1);
+		ret->type = AST_PASS;
+	} else {
+		ret = allocNode(state, NULL, 0);
+		ret->type = AST_VALUE;
+		_winter_tokenToObject(state, token, &ret->value);
 	}
-	ast_node_t *ret = allocNode(state, NULL, size);
-	ret->type = type;
-	
-	//TODO: convert value to object
-	switch(token->type) {
-		case TK_DECIMAL:
-			ret->value.integer = win_strtoll(token->cursor.pointer, 10);
-			break;
-		case TK_HEX:
-			ret->value.integer = win_strtoll(token->cursor.pointer + 2, 16);
-			break;
-		case TK_BINARY:
-			ret->value.integer = win_strtoll(token->cursor.pointer + 2, 2);
-			break;
-		case TK_OCTAL:
-			ret->value.integer = win_strtoll(token->cursor.pointer + 1, 8);
-			break;
-		default: break;
-	}
-	
 	return ret;
 }
 
@@ -98,20 +34,63 @@ static ast_node_t *createOprNode(winterState_t *state, ast_node_type_t type) {
 	return ret;
 }
 
-static int precedence(ast_node_type_t operator) {
-	switch (operator) {
-		case AST_ADD:
-		case AST_SUB:
-			return 1;
-		case AST_MUL:
-		case AST_DIV:
-		case AST_MOD:
-			return 2;
-		case AST_POW:
-			return 3;
-		
-		default: return 999;
+typedef struct opinfo_t {
+	int precedence;
+	enum { right, left } associativity;
+	void (*function)(void);
+} opinfo_t;
+
+//I love tables
+#define op(t, p, a, f) {p, a, f}
+static const opinfo_t opinfo[] = {
+	op(AST_LSHIFTEQ, 2, right, NULL),
+	op(AST_RSHIFTEQ, 2, right, NULL),
+	op(TK_INC,       2, right, NULL),
+	op(TK_DEC,       2, right, NULL),
+	op(AST_POW,      5, left,  NULL),
+	op(AST_ADDEQ,    2, left,  NULL),
+	op(AST_SUBEQ,    2, left,  NULL),
+	op(AST_MULEQ,    2, left,  NULL),
+	op(AST_DIVEQ,    2, left,  NULL),
+	op(AST_MODEQ,    2, left,  NULL),
+	op(AST_OR,       2, right, NULL),
+	op(AST_AND,      2, right, NULL),
+	op(AST_OREQ,     2, left,  NULL),
+	op(AST_ANDEQ,    2, left,  NULL),
+	op(AST_XOREQ,    2, left,  NULL),
+	op(AST_LSHIFT,   2, right, NULL),
+	op(AST_RSHIFT,   2, right, NULL),
+	op(AST_NOTEQ,    2, right, NULL),
+	op(AST_LEQ,      2, right, NULL),
+	op(AST_GEQ,      2, right, NULL),
+	op(AST_EQ,       2, right, NULL),
+	op(AST_DOT,      2, right, NULL),
+	op(AST_COMMA,    2, right, NULL),
+	op(AST_ASSIGN,   2, left,  NULL),
+	op(AST_ADD,      2, right, NULL),
+	op(AST_SUB,      2, right, NULL),
+	op(AST_MUL,      3, right, NULL),
+	op(AST_DIV,      3, right, NULL),
+	op(AST_MOD,      3, right, NULL),
+	op(AST_LESS,     2, right, NULL),
+	op(AST_GREATER,  2, right, NULL),
+	op(AST_BITAND,   2, right, NULL),
+	op(AST_BITOR,    2, right, NULL),
+	op(AST_NOT,      2, right, NULL),
+	op(AST_XOR,      2, right, NULL),
+	op(AST_BITNOT,   2, right, NULL)
+};
+
+static inline int precedence(ast_node_type_t operator) {
+	//if the type is not an operator then return infinite precedence
+	if (operator < AST_LSHIFTEQ) {
+		return 999;
+	} else {
+		return opinfo[operator - AST_LSHIFTEQ].precedence;
 	}
+}
+static inline int associativity(ast_node_type_t operator) {
+	return opinfo[operator - AST_LSHIFTEQ].associativity;
 }
 
 static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex) {

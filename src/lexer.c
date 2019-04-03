@@ -64,8 +64,8 @@ static inline size_t lexKeyword(lexState_t *lex) {
 	return lex->lookahead.size;
 }
 
-const char *symbol3[] = { "<<=", ">>=" };
-const char *symbol2[] = {
+static const char *symbol3[] = { "<<=", ">>=" };
+static const char *symbol2[] = {
 	"++", "--", "**",
 	"+=", "-=", "*=", "/=", "%=",
 	"||", "&&",
@@ -73,7 +73,7 @@ const char *symbol2[] = {
 	"<<", ">>",
 	"!=", "<=", ">=", "=="
 };
-const char symbols[] = ".,=+-*/%<>&|!^~()[]{};";
+static const char symbols[] = ".,=+-*/%<>&|!^~()[]{};";
 static inline size_t lexSymbol(lexState_t *lex) {
 	for (size_t i = 0; i < LENGTH(symbol3); i++) {
 		if (strncmp(STRING, symbol3[i], 3) == 0) {

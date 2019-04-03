@@ -2,6 +2,7 @@
 #define OBJECT_H
 
 #include "winter.h"
+#include "lexer.h"
 
 typedef enum object_type_t {
 	TYPE_UNKNOWN = 0,
@@ -20,6 +21,8 @@ typedef struct object_t {
 		void *pointer;
 	};
 } object_t;
+
+void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t *dest);
 
 winterInt_t   _winter_castInt(const object_t *object);
 winterFloat_t _winter_castFloat(const object_t *object);
