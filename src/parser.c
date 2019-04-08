@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 //creates or resizes a node
+//TODO: maybe make custom allocator
 static ast_node_t *allocNode(winterState_t *state, ast_node_t *node, size_t size) {
 	ast_node_t *ret = state->allocator(NULL, sizeof(ast_node_t) + sizeof(ast_node_t*) * size);
 	ret->numNodes = size;
@@ -25,10 +26,7 @@ static ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
 }
 
 static ast_node_t *createOprNode(winterState_t *state, ast_node_type_t type) {
-	size_t size = 2;
-	if (isUnary(type)) {
-		size = 1;
-	}
+	size_t size = isUnary(type) ? 1 : 2;
 	ast_node_t *ret = allocNode(state, NULL, size);
 	ret->type = type;
 	return ret;
@@ -41,7 +39,7 @@ typedef struct opinfo_t {
 } opinfo_t;
 
 //I love tables
-#define op(t, p, a, f) {p, a, f}
+#define op(t, p, a, f) {p, a, (void(*)(void))f}
 static const opinfo_t opinfo[] = {
 	op(AST_LSHIFTEQ, 2, right, NULL),
 	op(AST_RSHIFTEQ, 2, right, NULL),
@@ -67,11 +65,11 @@ static const opinfo_t opinfo[] = {
 	op(AST_DOT,      2, right, NULL),
 	op(AST_COMMA,    2, right, NULL),
 	op(AST_ASSIGN,   2, left,  NULL),
-	op(AST_ADD,      2, right, NULL),
-	op(AST_SUB,      2, right, NULL),
-	op(AST_MUL,      3, right, NULL),
-	op(AST_DIV,      3, right, NULL),
-	op(AST_MOD,      3, right, NULL),
+	op(AST_ADD,      2, right, _winter_objectAdd),
+	op(AST_SUB,      2, right, _winter_objectSub),
+	op(AST_MUL,      3, right, _winter_objectMul),
+	op(AST_DIV,      3, right, _winter_objectDiv),
+	op(AST_MOD,      3, right, _winter_objectMod),
 	op(AST_LESS,     2, right, NULL),
 	op(AST_GREATER,  2, right, NULL),
 	op(AST_BITAND,   2, right, NULL),
@@ -185,4 +183,28 @@ ast_node_t *_winter_generateTree(winterState_t *state, const char *source) {
 	lexState_t lex = {source};
 	_winter_lexNext(&lex);
 	return parseExpression(state, &lex);
+}
+
+//Temporary for testing
+ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
+	if (isOperator(node->type)) {
+		ast_node_t *left  = walkTree(state, node->children[0]);
+		ast_node_t *right = NULL;
+		if (node->numNodes == 2) {
+			right = walkTree(state, node->children[1]);
+		}
+		
+		typedef int (*func)(object_t *, object_t *);
+		
+		if (node->type >= AST_LSHIFTEQ) {
+			((func)(opinfo[node->type - AST_LSHIFTEQ].function))(&left->value, &right->value);
+		}
+		node->value = left->value;
+		
+		state->allocator(left, 0);
+		state->allocator(right, 0);
+		
+		node->type = AST_VALUE;
+	}
+	return node;
 }

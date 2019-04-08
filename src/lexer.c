@@ -121,9 +121,13 @@ static inline size_t lexNumber(lexState_t *lex) {
 			lex->lookahead.type = TK_OCTAL;
 			size = 1;
 			while (isOctal(STRING[size])) size++;
+			if (STRING[size] == '.') {
+				goto floats;
+			}
 		} else {
 			while (isNumber(STRING[size])) size++;
 			if (STRING[size] == '.') {
+				floats:
 				lex->lookahead.type = TK_FLOAT;
 				do {
 					size++;

@@ -6,6 +6,7 @@
 
 typedef enum object_type_t {
 	TYPE_UNKNOWN = 0,
+	TYPE_NULL,
 	TYPE_INT,
 	TYPE_FLOAT,
 	TYPE_STRING,
@@ -26,5 +27,13 @@ void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t 
 
 winterInt_t   _winter_castInt(const object_t *object);
 winterFloat_t _winter_castFloat(const object_t *object);
+
+//Takes the result of a + b and stores it in a
+//Also does string concatenation
+int _winter_objectAdd(object_t *a, object_t *b);
+int _winter_objectSub(object_t *a, object_t *b);
+int _winter_objectMul(object_t *a, object_t *b);
+int _winter_objectDiv(object_t *a, object_t *b);
+int _winter_objectMod(object_t *a, object_t *b);
 
 #endif
