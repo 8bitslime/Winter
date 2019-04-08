@@ -104,30 +104,23 @@ static inline size_t lexSymbol(lexState_t *lex) {
 
 static inline size_t lexNumber(lexState_t *lex) {
 	size_t size = 0;
-	if (isNumber(STRING[size])) {
-		lex->lookahead.type = TK_DECIMAL;
+	if (isNumber(STRING[0])) {
+		bool_t leadingZero = (STRING[0] == '0');
+		lex->lookahead.type = leadingZero ? TK_OCTAL : TK_DECIMAL;
 		size = 1;
 		
 		//Check if it's a hex, octal, or binary literal
-		if (STRING[0] == '0' && (STRING[1] == 'x' || STRING[1] == 'X') && isHex(STRING[2])) {
+		if (leadingZero && (STRING[1] == 'x' || STRING[1] == 'X') && isHex(STRING[2])) {
 			lex->lookahead.type = TK_HEX;
 			size = 3;
 			while (isHex(STRING[size])) size++;
-		} else if (STRING[0] == '0' && (STRING[1] == 'b' || STRING[1] == 'B') && isBinary(STRING[2])) {
+		} else if (leadingZero && (STRING[1] == 'b' || STRING[1] == 'B') && isBinary(STRING[2])) {
 			lex->lookahead.type = TK_BINARY;
 			size = 3;
 			while (isBinary(STRING[size])) size++;
-		} else if (STRING[0] == '0') {
-			lex->lookahead.type = TK_OCTAL;
-			size = 1;
-			while (isOctal(STRING[size])) size++;
-			if (STRING[size] == '.') {
-				goto floats;
-			}
 		} else {
 			while (isNumber(STRING[size])) size++;
 			if (STRING[size] == '.') {
-				floats:
 				lex->lookahead.type = TK_FLOAT;
 				do {
 					size++;
