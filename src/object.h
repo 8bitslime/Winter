@@ -4,6 +4,10 @@
 #include "winter.h"
 #include "lexer.h"
 
+//Object related error:
+#define OBJECT_OK          0
+#define OBJECT_ERROR_TYPE -1
+
 typedef enum object_type_t {
 	TYPE_UNKNOWN = 0,
 	TYPE_NULL,
@@ -35,5 +39,7 @@ int _winter_objectSub(object_t *a, object_t *b);
 int _winter_objectMul(object_t *a, object_t *b);
 int _winter_objectDiv(object_t *a, object_t *b);
 int _winter_objectMod(object_t *a, object_t *b);
+
+int _winter_objectNegate(object_t *a);
 
 #endif

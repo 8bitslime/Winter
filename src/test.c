@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
 			node = walkTree(state, node);
 			switch (node->value.type) {
 				case TYPE_INT:
-					printf("%llu\n", node->value.integer);
+					printf("%lli\n", node->value.integer);
 					break;
 				case TYPE_FLOAT:
 					printf("%f\n", node->value.floating);

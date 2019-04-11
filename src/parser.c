@@ -32,15 +32,17 @@ static ast_node_t *createOprNode(winterState_t *state, ast_node_type_t type) {
 	return ret;
 }
 
+typedef void (*func_ptr_void_t)(void);
 typedef struct opinfo_t {
 	int precedence;
 	enum { right, left } associativity;
-	void (*function)(void);
+	func_ptr_void_t function;
 } opinfo_t;
 
 //I love tables
-#define op(t, p, a, f) {p, a, (void(*)(void))f}
+#define op(t, p, a, f) {p, a, (func_ptr_void_t)f}
 static const opinfo_t opinfo[] = {
+	//TODO: implement all the NULLs
 	op(AST_LSHIFTEQ, 2, right, NULL),
 	op(AST_RSHIFTEQ, 2, right, NULL),
 	op(TK_INC,       2, right, NULL),
@@ -76,7 +78,8 @@ static const opinfo_t opinfo[] = {
 	op(AST_BITOR,    2, right, NULL),
 	op(AST_NOT,      2, right, NULL),
 	op(AST_XOR,      2, right, NULL),
-	op(AST_BITNOT,   2, right, NULL)
+	op(AST_BITNOT,   2, right, NULL),
+	op(AST_NEGATE,   6, right, _winter_objectNegate),
 };
 
 static inline int precedence(ast_node_type_t operator) {
@@ -89,6 +92,10 @@ static inline int precedence(ast_node_type_t operator) {
 }
 static inline int associativity(ast_node_type_t operator) {
 	return opinfo[operator - AST_LSHIFTEQ].associativity;
+}
+
+static inline func_ptr_void_t function(ast_node_type_t operator) {
+	return opinfo[operator - AST_LSHIFTEQ].function;
 }
 
 static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex) {
@@ -127,7 +134,7 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 			} else if (isUnarySymbol(token->type)) {
 				//Add unary operator
 				//TODO: unary precedence
-				if (token->type == '-') {
+				if (token->type == TK_SUB) {
 					token->type = AST_NEGATE;
 				}
 				ast_node_t *node = createOprNode(state, token->type);
@@ -194,15 +201,22 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 			right = walkTree(state, node->children[1]);
 		}
 		
-		typedef int (*func)(object_t *, object_t *);
+		typedef int (*binary)(object_t *, object_t *);
+		typedef int (*unary)(object_t *);
 		
 		if (node->type >= AST_LSHIFTEQ) {
-			((func)(opinfo[node->type - AST_LSHIFTEQ].function))(&left->value, &right->value);
+			if (isUnary(node->type)) {
+				((unary)function(node->type))(&left->value);
+			} else {
+				((binary)function(node->type))(&left->value, &right->value);
+			}
 		}
 		node->value = left->value;
 		
 		state->allocator(left, 0);
-		state->allocator(right, 0);
+		if (right) {
+			state->allocator(right, 0);
+		}
 		
 		node->type = AST_VALUE;
 	}

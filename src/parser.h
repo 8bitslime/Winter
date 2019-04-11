@@ -44,6 +44,7 @@ typedef enum ast_node_type_t {
 	AST_BITAND = TK_BITAND, AST_BITOR = TK_BITOR, AST_NOT = TK_NOT,
 	AST_XOR = TK_XOR, AST_BITNOT = TK_BITNOT,
 	
+	//Operators that aren't tokens
 	AST_NEGATE
 } ast_node_type_t;
 
