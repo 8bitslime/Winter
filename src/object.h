@@ -8,6 +8,14 @@
 #define OBJECT_OK          0
 #define OBJECT_ERROR_TYPE -1
 
+#define isRefCounted(t) ((t) >= TYPE_STRING)
+
+//Add to beginning of all ref counted types
+#define REFCOUNT int _refcount
+
+typedef unsigned long hash_t;
+hash_t _winter_hashCStr(const char *string);
+
 typedef enum object_type_t {
 	TYPE_UNKNOWN = 0,
 	TYPE_NULL,

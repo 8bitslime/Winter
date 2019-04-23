@@ -3,6 +3,20 @@
 
 #define typeof(o) (o->type)
 
+//djb2 by Dan Bernstein.
+hash_t _winter_hashCStr(const char *string) {
+	hash_t out = 5381, c;
+	while ((c = *string++)) {
+		out = ((out << 5) + out) + c;
+	}
+	
+	if (out == 0) { //reserved hash value
+		out = 1;
+	}
+	
+	return out;
+}
+
 void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t *dest) {
 	dest->type = TYPE_INT;
 	switch (token->type) {

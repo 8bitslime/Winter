@@ -9,6 +9,7 @@ set(WINTER_SOURCES
 	src/parser.c
 	src/winter.c
 	src/test.c
+	src/wstring.c
 )
 
 if (NOT MSVC)
