@@ -11,7 +11,8 @@
 #define isRefCounted(t) ((t) >= TYPE_STRING)
 
 //Add to beginning of all ref counted types
-#define REFCOUNT int _refcount
+#define REFCOUNT unsigned int _refcount
+#define REF_PERSISTENT 0xffffffff
 
 typedef unsigned long hash_t;
 hash_t _winter_hashCStr(const char *string);

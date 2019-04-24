@@ -7,6 +7,7 @@ set(WINTER_SOURCES
 	src/lexer.c
 	src/object.c
 	src/parser.c
+	src/table.c
 	src/winter.c
 	src/test.c
 	src/wstring.c

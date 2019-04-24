@@ -7,6 +7,10 @@ typedef struct winterState_t {
 	winterAlloc_t allocator;
 } winterState_t;
 
+#define MALLOC(s)     (state->allocator(NULL, (s)))
+#define REALLOC(p, s) (state->allocator((p),  (s)))
+#define FREE(p)       (state->allocator((p),    0))
+
 typedef int bool_t;
 #ifndef true
 #define true 1
@@ -57,7 +61,6 @@ static inline winterInt_t winter_strtoi(const char *number, int base) {
 	}
 	return out;
 }
-
 static inline winterFloat_t winter_strtof(const char *number) {
 	winterFloat_t out = 0;
 	

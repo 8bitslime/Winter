@@ -1,6 +1,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "wstring.h"
+#include "table.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
