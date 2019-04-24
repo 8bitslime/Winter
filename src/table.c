@@ -12,7 +12,7 @@ table_t *_winter_tableAlloc(winterState_t *state, size_t capacity) {
 	return out;
 }
 void _winter_tableFree(winterState_t *state, table_t *table) {
-	while (table->head) {
+	while (table->head != NULL) {
 		bucket_t *temp = table->head;
 		table->head = table->head->next;
 		FREE(temp);
@@ -43,14 +43,16 @@ void _winter_tableInsert(winterState_t *state, table_t *table, wstring_t *name, 
 		bucket = MALLOC(sizeof(bucket_t));
 		bucket->name = name;
 		hash_t hash = _winter_stringHash(name) % table->numBuckets;
+		bucket_t **slot = &table->buckets[hash];
 		
-		if (table->buckets[hash] != NULL) {
-			bucket->next = table->buckets[hash]->next;
-		} else {
+		if (*slot == NULL) {
+			*slot = bucket;
 			bucket->next = table->head;
 			table->head = bucket;
+		} else {
+			bucket->next = (*slot)->next;
+			(*slot)->next = bucket;
 		}
-		table->buckets[hash] = bucket;
 	}
 	bucket->value = *value;
 	table->size++;
