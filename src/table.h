@@ -1,6 +1,9 @@
 #ifndef TABLE_H
 #define TABLE_H
 
+//prevent circular dependencies
+typedef struct winterState_t winterState_t;
+
 #include "object.h"
 #include "wstring.h"
 

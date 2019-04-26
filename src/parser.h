@@ -1,10 +1,9 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "winter.h"
+#include "wtype.h"
 #include "lexer.h"
 #include "object.h"
-#include <stddef.h>
 
 #define isOperator(t) (((token_type_t)(t) >= TK_LSHIFTEQ && (token_type_t)(t) <= TK_BITNOT) || \
 					  (ast_node_type_t)(t) == AST_NEGATE || (ast_node_type_t)(t) == AST_PASS)

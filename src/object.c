@@ -1,5 +1,4 @@
 #include "object.h"
-#include "wtype.h"
 
 #define typeof(o) (o->type)
 
@@ -19,7 +18,7 @@ hash_t _winter_hashCStr(const char *string) {
 
 void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t *dest) {
 	dest->type = TYPE_INT;
-	switch (token->type) {
+	switch (typeof(token)) {
 		case TK_BINARY:
 			dest->integer = winter_strtoi(token->cursor.pointer + 2, 2);
 			break;
@@ -46,7 +45,7 @@ void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t 
 }
 
 winterInt_t _winter_castInt(const object_t *object) {
-	switch (object->type)  {
+	switch (typeof(object)) {
 		case TYPE_INT:
 			return object->integer;
 		
@@ -58,7 +57,7 @@ winterInt_t _winter_castInt(const object_t *object) {
 }
 
 winterFloat_t _winter_castFloat(const object_t *object) {
-	switch (object->type)  {
+	switch (typeof(object)) {
 		case TYPE_INT:
 			return (winterFloat_t)object->integer;
 		

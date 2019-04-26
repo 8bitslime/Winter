@@ -1,6 +1,4 @@
 #include "parser.h"
-#include "wtype.h"
-
 #include <stdio.h>
 
 //creates or resizes a node

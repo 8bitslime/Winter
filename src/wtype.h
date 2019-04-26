@@ -3,8 +3,12 @@
 
 #include "winter.h"
 
+//Forward declare
+typedef struct table_t table_t;
+
 typedef struct winterState_t {
 	winterAlloc_t allocator;
+	table_t      *globals;
 } winterState_t;
 
 #define MALLOC(s)     (state->allocator(NULL, (s)))

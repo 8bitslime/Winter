@@ -1,5 +1,4 @@
 #include "lexer.h"
-#include "wtype.h"
 #include <string.h>
 
 #define STRING (lex->string + lex->cursor.pos)

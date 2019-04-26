@@ -1,5 +1,5 @@
-#include <string.h>
 #include "wstring.h"
+#include <string.h>
 
 hash_t _winter_stringHash(wstring_t *string) {
 	if (!string->hash) {

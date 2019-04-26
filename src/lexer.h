@@ -1,7 +1,7 @@
 #ifndef WINTER_LEXER_H
 #define WINTER_LEXER_H
 
-#include "winter.h"
+#include "wtype.h"
 
 typedef enum token_type_t {
 	TK_UNKNOWN = 0,

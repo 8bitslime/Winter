@@ -32,22 +32,6 @@ int main(int argc, char **argv) {
 	winterState_t *state = winterCreateState(allocator);
 	char buffer[512] = {0};
 	
-	table_t *table = _winter_tableAlloc(state, 3);
-	
-	wstring_t string1 = AUTO_STRING("hello world");
-	wstring_t string2 = AUTO_STRING("other string");
-	object_t value1 = { .type=TYPE_INT, .integer=13 };
-	object_t value2 = { .type=TYPE_INT, .integer=140 };
-	
-	_winter_tableInsert(state, table, &string1, &value1);
-	_winter_tableInsert(state, table, &string2, &value2);
-	object_t *ptr = _winter_tableGetObject(table, &string2);
-	
-	if (ptr != NULL) {
-		printf("value: %llu\n", ptr->integer);
-	}
-	_winter_tableFree(state, table);
-	
 	printf("Winter interpreter v0.1\n");
 	
 	while (1) {

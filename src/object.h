@@ -1,7 +1,7 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
-#include "winter.h"
+#include "wtype.h"
 #include "lexer.h"
 
 //Object related error:

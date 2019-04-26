@@ -2,7 +2,6 @@
 #define WSTRING_H
 
 //TODO unicode
-#include "winter.h"
 #include "wtype.h"
 #include "object.h"
 
