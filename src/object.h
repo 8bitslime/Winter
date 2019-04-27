@@ -11,8 +11,12 @@
 #define isRefCounted(t) ((t) >= TYPE_STRING)
 
 //Add to beginning of all ref counted types
-#define REFCOUNT unsigned int _refcount
+#define REFCOUNT uint32_t _refcount
 #define REF_PERSISTENT 0xffffffff
+
+typedef struct refcount_t {
+	REFCOUNT;
+} refcount_t;
 
 typedef unsigned long hash_t;
 hash_t _winter_hashCStr(const char *string);
@@ -41,14 +45,19 @@ void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t 
 winterInt_t   _winter_castInt(const object_t *object);
 winterFloat_t _winter_castFloat(const object_t *object);
 
+object_t *_winter_objectAddRef(winterState_t *state, object_t *obj);
+object_t *_winter_objectDelRef(winterState_t *state, object_t *obj);
+
 //Takes the result of a + b and stores it in a
 //Also does string concatenation
-int _winter_objectAdd(object_t *a, object_t *b);
-int _winter_objectSub(object_t *a, object_t *b);
-int _winter_objectMul(object_t *a, object_t *b);
-int _winter_objectDiv(object_t *a, object_t *b);
-int _winter_objectMod(object_t *a, object_t *b);
+int _winter_objectAdd(winterState_t *state, object_t *a, object_t *b);
+int _winter_objectSub(winterState_t *state, object_t *a, object_t *b);
+int _winter_objectMul(winterState_t *state, object_t *a, object_t *b);
+int _winter_objectDiv(winterState_t *state, object_t *a, object_t *b);
+int _winter_objectMod(winterState_t *state, object_t *a, object_t *b);
 
-int _winter_objectNegate(object_t *a);
+int _winter_objectAssign(winterState_t *state, object_t *a, object_t *b);
+
+int _winter_objectNegate(winterState_t *state, object_t *a);
 
 #endif

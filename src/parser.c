@@ -1,10 +1,12 @@
 #include "parser.h"
+#include "wstring.h"
+#include "table.h"
 #include <stdio.h>
 
 //creates or resizes a node
 //TODO: maybe make custom allocator
 static ast_node_t *allocNode(winterState_t *state, ast_node_t *node, size_t size) {
-	ast_node_t *ret = state->allocator(NULL, sizeof(ast_node_t) + sizeof(ast_node_t*) * size);
+	ast_node_t *ret = MALLOC(sizeof(ast_node_t) + sizeof(ast_node_t*) * size);
 	ret->numNodes = size;
 	ret->children = (ast_node_t**)(ret + 1);
 	return ret;
@@ -17,7 +19,10 @@ static ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
 		ret->type = AST_PASS;
 	} else {
 		ret = allocNode(state, NULL, 0);
-		ret->type = AST_VALUE;
+		switch (token->type) {
+			case TK_IDENT: ret->type = AST_IDENT; break;
+			default:       ret->type = AST_VALUE; break;
+		}
 		_winter_tokenToObject(state, token, &ret->value);
 	}
 	return ret;
@@ -33,7 +38,7 @@ static ast_node_t *createOprNode(winterState_t *state, ast_node_type_t type) {
 typedef void (*func_ptr_void_t)(void);
 typedef struct opinfo_t {
 	int precedence;
-	enum { right, left } associativity;
+	enum { left, right } associativity;
 	func_ptr_void_t function;
 } opinfo_t;
 
@@ -64,7 +69,7 @@ static const opinfo_t opinfo[] = {
 	op(AST_EQ,       2, right, NULL),
 	op(AST_DOT,      2, right, NULL),
 	op(AST_COMMA,    2, right, NULL),
-	op(AST_ASSIGN,   2, left,  NULL),
+	op(AST_ASSIGN,   1, left,  _winter_objectAssign),
 	op(AST_ADD,      2, right, _winter_objectAdd),
 	op(AST_SUB,      2, right, _winter_objectSub),
 	op(AST_MUL,      3, right, _winter_objectMul),
@@ -142,7 +147,7 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 					tail->children[tail->numNodes - 1] = node;
 				}
 				tail = node;
-				//Don't change expect because we still want an expression next
+				//Don't change 'expect' because we still want an expression next
 				
 			} else {
 				//TODO: error handling and unary operators
@@ -163,14 +168,22 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 					tree = node;
 					tail = node;
 				} else {
-					//higher precedence goes down the tree
-					ast_node_t *walk = tree;
-					while (priority > precedence(walk->children[1]->type)) {
-						walk = walk->children[1];
+					//check associativity associativity
+					if (associativity(token->type) == left) {
+						printf("whenever this thing gets called\n");
+						node->children[0] = tail->children[1];
+						tail->children[1] = node;
+						tail = node;
+					} else {
+						//higher precedence goes down the tree
+						ast_node_t *walk = tree;
+						while (priority > precedence(walk->children[1]->type)) {
+							walk = walk->children[1];
+						}
+						node->children[0] = walk->children[1];
+						walk->children[1] = node;
+						tail = node;
 					}
-					node->children[0] = walk->children[1];
-					walk->children[1] = node;
-					tail = node;
 				}
 				
 				expect = expression;
@@ -194,22 +207,36 @@ ast_node_t *_winter_generateTree(winterState_t *state, const char *source) {
 ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 	if (isOperator(node->type)) {
 		ast_node_t *left  = walkTree(state, node->children[0]);
+		printf("left type: %i\n", left->type);
+		
 		ast_node_t *right = NULL;
 		if (node->numNodes == 2) {
 			right = walkTree(state, node->children[1]);
+			printf("right type: %i\n", right->type);
 		}
 		
-		typedef int (*binary)(object_t *, object_t *);
-		typedef int (*unary)(object_t *);
+		object_t *objs[] = {
+			left->type == AST_REFERENCE ? left->value.pointer : &left->value,
+			right ? (right->type == AST_REFERENCE ? right->value.pointer : &right->value) : NULL
+		};
+		
+		typedef int (*binary)(winterState_t *state, object_t *, object_t *);
+		typedef int (*unary) (winterState_t *state, object_t *);
 		
 		if (node->type >= AST_LSHIFTEQ) {
+			
+			//DEBUG ONLY
+			if (function(node->type) == NULL) {
+				printf("function not implemented! %i\n", node->type);
+			} else
+			
 			if (isUnary(node->type)) {
-				((unary)function(node->type))(&left->value);
+				((unary)function(node->type))(state, objs[0]);
 			} else {
-				((binary)function(node->type))(&left->value, &right->value);
+				((binary)function(node->type))(state, objs[0], objs[1]);
 			}
 		}
-		node->value = left->value;
+		node->value = *objs[0];
 		
 		state->allocator(left, 0);
 		if (right) {
@@ -217,6 +244,15 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 		}
 		
 		node->type = AST_VALUE;
+	} else if (node->type == AST_IDENT) {
+		object_t *obj = _winter_tableGetObject(state->globals, node->value.pointer);
+		if (obj == NULL) {
+			//Undefined, just make it anyway who cares atm
+			obj = _winter_tableInsert(state, state->globals, node->value.pointer, NULL);
+		}
+		_winter_objectDelRef(state, &node->value);
+		node->type = AST_REFERENCE;
+		node->value.pointer = obj;
 	}
 	return node;
 }

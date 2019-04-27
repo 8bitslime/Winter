@@ -42,6 +42,9 @@ int main(int argc, char **argv) {
 		ast_node_t *node = _winter_generateTree(state, buffer);
 		if (node != NULL) {
 			node = walkTree(state, node);
+			if (node->type == AST_REFERENCE) {
+				node->value = *(object_t*)(node->value.pointer);
+			}
 			switch (node->value.type) {
 				case TYPE_INT:
 					printf("%lli\n", node->value.integer);

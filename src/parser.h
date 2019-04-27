@@ -20,7 +20,7 @@ typedef enum ast_node_type_t {
 	AST_PASS,
 	
 	AST_IDENT = TK_IDENT,
-	AST_VALUE,
+	AST_VALUE, AST_REFERENCE,
 	
 	//Keywords to be used in the AST
 	AST_FOR = TK_FOR,

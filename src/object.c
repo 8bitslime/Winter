@@ -1,4 +1,6 @@
 #include "object.h"
+#include "wstring.h"
+#include "table.h"
 
 #define typeof(o) (o->type)
 
@@ -14,6 +16,33 @@ hash_t _winter_hashCStr(const char *string) {
 	}
 	
 	return out;
+}
+
+object_t *_winter_objectAddRef(winterState_t *state, object_t *obj) {
+	if (isRefCounted(obj->type)) {
+		refcount_t *ref = obj->pointer;
+		if (ref->_refcount != REF_PERSISTENT) {
+			ref->_refcount += 1;
+		}
+	}
+	return obj;
+}
+object_t *_winter_objectDelRef(winterState_t *state, object_t *obj) {
+	if (isRefCounted(obj->type)) {
+		refcount_t *ref = obj->pointer;
+		if (ref->_refcount != REF_PERSISTENT) {
+			ref->_refcount -= 1;
+			if (ref->_refcount == 0) {
+				switch (obj->type) {
+					case TYPE_STRING: _winter_stringFree(state, obj->pointer); break;
+					case TYPE_TABLE:  _winter_tableFree (state, obj->pointer); break;
+					default: break;
+				}
+				return NULL;
+			}
+		}
+	}
+	return obj;
 }
 
 void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t *dest) {
@@ -35,6 +64,13 @@ void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t 
 		case TK_FLOAT:
 			dest->floating = winter_strtof(token->cursor.pointer);
 			dest->type = TYPE_FLOAT;
+			break;
+		
+		case TK_IDENT:
+			dest->pointer = _winter_stringCreateSize(state, token->cursor.pointer, token->size);
+			dest->type = TYPE_STRING;
+			//Add reference to new string
+			_winter_objectAddRef(state, dest);
 			break;
 		
 		default:
@@ -68,7 +104,7 @@ winterFloat_t _winter_castFloat(const object_t *object) {
 	}
 }
 
-int _winter_objectAdd(object_t *a, object_t *b) {
+int _winter_objectAdd(winterState_t *state, object_t *a, object_t *b) {
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) > TYPE_STRING || typeof(b) > TYPE_STRING) {
 			//error
@@ -86,7 +122,7 @@ int _winter_objectAdd(object_t *a, object_t *b) {
 	}
 	return OBJECT_ERROR_TYPE;
 }
-int _winter_objectSub(object_t *a, object_t *b) {
+int _winter_objectSub(winterState_t *state, object_t *a, object_t *b) {
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) >= TYPE_STRING || typeof(b) >= TYPE_STRING) {
 			//error
@@ -101,7 +137,7 @@ int _winter_objectSub(object_t *a, object_t *b) {
 	}
 	return OBJECT_ERROR_TYPE;
 }
-int _winter_objectMul(object_t *a, object_t *b) {
+int _winter_objectMul(winterState_t *state, object_t *a, object_t *b) {
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) >= TYPE_STRING || typeof(b) >= TYPE_STRING) {
 			//error
@@ -116,7 +152,7 @@ int _winter_objectMul(object_t *a, object_t *b) {
 	}
 	return OBJECT_ERROR_TYPE;
 }
-int _winter_objectDiv(object_t *a, object_t *b) {
+int _winter_objectDiv(winterState_t *state, object_t *a, object_t *b) {
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) >= TYPE_STRING || typeof(b) >= TYPE_STRING) {
 			//error
@@ -131,7 +167,7 @@ int _winter_objectDiv(object_t *a, object_t *b) {
 	}
 	return OBJECT_ERROR_TYPE;
 }
-int _winter_objectMod(object_t *a, object_t *b) {
+int _winter_objectMod(winterState_t *state, object_t *a, object_t *b) {
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) >= TYPE_STRING || typeof(b) >= TYPE_STRING) {
 			//error
@@ -147,7 +183,13 @@ int _winter_objectMod(object_t *a, object_t *b) {
 	return OBJECT_ERROR_TYPE;
 }
 
-int _winter_objectNegate(object_t *a) {
+int _winter_objectAssign(winterState_t *state, object_t *a, object_t *b) {
+	_winter_objectDelRef(state, a);
+	*a = *_winter_objectAddRef(state, b);
+	return OBJECT_OK;
+}
+
+int _winter_objectNegate(winterState_t *state, object_t *a) {
 	switch(typeof(a)) {
 		case TYPE_FLOAT:
 			a->floating *= -1;
