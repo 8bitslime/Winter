@@ -14,12 +14,7 @@ table_t *_winter_tableAlloc(winterState_t *state, size_t capacity) {
 void _winter_tableFree(winterState_t *state, table_t *table) {
 	while (table->head != NULL) {
 		bucket_t *temp = table->head;
-		
-		//Temporary refcount workaround
-		object_t obj = { TYPE_STRING, .pointer = temp->name };
-		_winter_objectDelRef(state, &obj);
-		//TODO: fix this
-		
+		_winter_objectDelRef(state, &temp->key);
 		table->head = table->head->next;
 		FREE(temp);
 	}
@@ -29,12 +24,12 @@ void _winter_tableFree(winterState_t *state, table_t *table) {
 	FREE(table);
 }
 
-static inline bucket_t *getBucket(table_t *table, wstring_t *name) {
-	hash_t hash = _winter_stringHash(name) % table->numBuckets;
+static inline bucket_t *getBucket(table_t *table, object_t *key) {
+	hash_t hash = _winter_hashObjet(key) % table->numBuckets;
 	bucket_t *bucket = table->buckets[hash];
-	while (bucket && !_winter_stringCompare(name, bucket->name)) {
+	while (bucket && !_winter_objectComp(key, &bucket->key)) {
 		bucket = bucket->next;
-		if (bucket && _winter_stringHash(bucket->name) % table->numBuckets != hash) {
+		if (bucket && _winter_hashObjet(&bucket->key) % table->numBuckets != hash) {
 			bucket = NULL;
 			break;
 		}
@@ -42,16 +37,15 @@ static inline bucket_t *getBucket(table_t *table, wstring_t *name) {
 	return bucket;
 }
 
-object_t *_winter_tableInsert(winterState_t *state, table_t *table, wstring_t *name, object_t *value) {
-	bucket_t *bucket = getBucket(table, name);
+object_t *_winter_tableInsert(winterState_t *state, table_t *table, object_t *key, object_t *value) {
+	bucket_t *bucket = getBucket(table, key);
 	if (bucket == NULL) {
 		//allocate new bucket for value
 		bucket = MALLOC(sizeof(bucket_t));
-		//Temporary refcount workaround
-		object_t obj = { TYPE_STRING, .pointer = name };
-		bucket->name = _winter_objectAddRef(state, &obj)->pointer;
-		//TODO: use objcts for hasing, not solely strings
-		hash_t hash = _winter_stringHash(name) % table->numBuckets;
+		
+		bucket->key = *_winter_objectAddRef(state, key);
+		
+		hash_t hash = _winter_hashObjet(key) % table->numBuckets;
 		bucket_t **slot = &table->buckets[hash];
 		
 		if (*slot == NULL) {
@@ -74,8 +68,8 @@ object_t *_winter_tableInsert(winterState_t *state, table_t *table, wstring_t *n
 	return &bucket->value;
 }
 
-object_t *_winter_tableGetObject(table_t *table, wstring_t *name) {
-	bucket_t *bucket = getBucket(table, name);
+object_t *_winter_tableGetObject(table_t *table, object_t *key) {
+	bucket_t *bucket = getBucket(table, key);
 	if (bucket) {
 		return &bucket->value;
 	} else {

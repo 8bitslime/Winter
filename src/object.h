@@ -18,9 +18,6 @@ typedef struct refcount_t {
 	REFCOUNT;
 } refcount_t;
 
-typedef unsigned long hash_t;
-hash_t _winter_hashCStr(const char *string);
-
 typedef enum object_type_t {
 	TYPE_UNKNOWN = 0,
 	TYPE_NULL,
@@ -40,6 +37,10 @@ typedef struct object_t {
 	};
 } object_t;
 
+typedef unsigned long hash_t;
+hash_t _winter_hashCStr(const char *string);
+hash_t _winter_hashObjet(object_t *obj);
+
 void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t *dest);
 
 winterInt_t   _winter_castInt(const object_t *object);
@@ -47,6 +48,8 @@ winterFloat_t _winter_castFloat(const object_t *object);
 
 object_t *_winter_objectAddRef(winterState_t *state, object_t *obj);
 object_t *_winter_objectDelRef(winterState_t *state, object_t *obj);
+
+bool_t _winter_objectComp(object_t *a, object_t *b);
 
 //Takes the result of a + b and stores it in a
 //Also does string concatenation

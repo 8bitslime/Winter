@@ -18,6 +18,18 @@ hash_t _winter_hashCStr(const char *string) {
 	return out;
 }
 
+hash_t _winter_hashObjet(object_t *obj) {
+	hash_t out = 1;
+	switch (obj->type) {
+		case TYPE_STRING:
+			out = _winter_stringHash(obj->pointer);
+			break;
+		
+		default: break;
+	}
+	return out;
+}
+
 object_t *_winter_objectAddRef(winterState_t *state, object_t *obj) {
 	if (isRefCounted(obj->type)) {
 		refcount_t *ref = obj->pointer;
@@ -43,6 +55,21 @@ object_t *_winter_objectDelRef(winterState_t *state, object_t *obj) {
 		}
 	}
 	return obj;
+}
+
+bool_t _winter_objectComp(object_t *a, object_t *b) {
+	bool_t out = false;
+	if (a->type == b->type) {
+		switch (a->type) {
+			case TYPE_UNKNOWN: out = false; break;
+			case TYPE_NULL:    out = true;  break;
+			case TYPE_INT:     out = a->integer  == b->integer;  break;
+			case TYPE_FLOAT:   out = a->floating == b->floating; break;
+			case TYPE_STRING:  out = _winter_stringCompare(a->pointer, b->pointer); break;
+			default: out = a->pointer == b->pointer; break;
+		}
+	}
+	return out;
 }
 
 void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t *dest) {

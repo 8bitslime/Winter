@@ -12,6 +12,32 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *tree);
 static int allocs = 0;
 static int frees  = 0;
 
+static inline void printObject(object_t *obj) {
+	switch (obj->type) {
+		case TYPE_UNKNOWN: printf("unknown object!"); break;
+		case TYPE_NULL:    printf("null"); break;
+		case TYPE_INT:     printf("int: %llu", obj->integer); break;
+		case TYPE_FLOAT:   printf("float: %f", obj->floating); break;
+		case TYPE_STRING:  printf("\"%s\"", ((wstring_t*)obj->pointer)->data); break;
+		default: printf("object type: %i", obj->type); break;
+	}
+}
+
+static inline void printAST(ast_node_t *tree, int level) {
+	for (int i = 1; i <= level; i++) {
+		printf("    |");
+	}
+	if (isOperator(tree->type)) {
+		printf("opr: %i\n", tree->type);
+		for (int i = 0; i < tree->numNodes; i++) {
+			printAST(tree->children[i], level + 1);
+		}
+	} else {
+		printObject(&tree->value);
+		printf("\n");
+	}
+}
+
 void *allocator(void *ptr, size_t size) {
 	void *ret = NULL;
 	if (size) {
@@ -41,21 +67,14 @@ int main(int argc, char **argv) {
 		
 		ast_node_t *node = _winter_generateTree(state, buffer);
 		if (node != NULL) {
+			printAST(node, 0);
+			
 			node = walkTree(state, node);
 			if (node->type == AST_REFERENCE) {
 				node->value = *(object_t*)(node->value.pointer);
 			}
-			switch (node->value.type) {
-				case TYPE_INT:
-					printf("%lli\n", node->value.integer);
-					break;
-				case TYPE_FLOAT:
-					printf("%f\n", node->value.floating);
-					break;
-				default:
-					printf("null\n");
-					break;
-			}
+			printObject(&node->value);
+			printf("\n");
 		}
 		
 		allocator(node, 0);

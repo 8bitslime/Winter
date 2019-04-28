@@ -8,7 +8,7 @@ typedef struct winterState_t winterState_t;
 #include "wstring.h"
 
 typedef struct bucket_t {
-	wstring_t *name;
+	object_t key;
 	object_t value;
 	struct bucket_t *next;
 } bucket_t;
@@ -24,7 +24,7 @@ typedef struct table_t {
 table_t *_winter_tableAlloc(winterState_t *state, size_t capacity);
 void _winter_tableFree(winterState_t *state, table_t *table);
 
-object_t *_winter_tableInsert(winterState_t *state, table_t *table, wstring_t *name, object_t *value);
-object_t *_winter_tableGetObject(table_t *table, wstring_t *name);
+object_t *_winter_tableInsert(winterState_t *state, table_t *table, object_t *key, object_t *value);
+object_t *_winter_tableGetObject(table_t *table, object_t *key);
 
 #endif

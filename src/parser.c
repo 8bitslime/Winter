@@ -163,27 +163,25 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 				int priority = precedence(node->type);
 				
 				//operator precedence in place
-				if (priority <= precedence(tree->type)) {
+				if (isExpression(tree->type) || (associativity(node->type) && priority <= precedence(tree->type))) {
 					node->children[0] = tree;
 					tree = node;
 					tail = node;
 				} else {
-					//check associativity associativity
-					if (associativity(token->type) == left) {
-						printf("whenever this thing gets called\n");
-						node->children[0] = tail->children[1];
-						tail->children[1] = node;
-						tail = node;
+					ast_node_t *append = tree;
+					//check associativity
+					if (associativity(node->type) == left) {
+						printf("lefty\n");
+						append = tail;
 					} else {
 						//higher precedence goes down the tree
-						ast_node_t *walk = tree;
-						while (priority > precedence(walk->children[1]->type)) {
-							walk = walk->children[1];
+						while (priority > precedence(append->children[append->numNodes - 1]->type)) {
+							append = append->children[append->numNodes - 1];
 						}
-						node->children[0] = walk->children[1];
-						walk->children[1] = node;
-						tail = node;
 					}
+					node->children[0] = append->children[append->numNodes - 1];
+					append->children[append->numNodes - 1] = node;
+					tail = node;
 				}
 				
 				expect = expression;
@@ -207,12 +205,9 @@ ast_node_t *_winter_generateTree(winterState_t *state, const char *source) {
 ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 	if (isOperator(node->type)) {
 		ast_node_t *left  = walkTree(state, node->children[0]);
-		printf("left type: %i\n", left->type);
-		
 		ast_node_t *right = NULL;
 		if (node->numNodes == 2) {
 			right = walkTree(state, node->children[1]);
-			printf("right type: %i\n", right->type);
 		}
 		
 		object_t *objs[] = {
@@ -238,17 +233,17 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 		}
 		node->value = *objs[0];
 		
-		state->allocator(left, 0);
+		FREE(left);
 		if (right) {
-			state->allocator(right, 0);
+			FREE(right);
 		}
 		
 		node->type = AST_VALUE;
 	} else if (node->type == AST_IDENT) {
-		object_t *obj = _winter_tableGetObject(state->globals, node->value.pointer);
+		object_t *obj = _winter_tableGetObject(state->globals, &node->value);
 		if (obj == NULL) {
 			//Undefined, just make it anyway who cares atm
-			obj = _winter_tableInsert(state, state->globals, node->value.pointer, NULL);
+			obj = _winter_tableInsert(state, state->globals, &node->value, NULL);
 		}
 		_winter_objectDelRef(state, &node->value);
 		node->type = AST_REFERENCE;

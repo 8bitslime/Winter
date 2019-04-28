@@ -16,11 +16,11 @@
 typedef enum ast_node_type_t {
 	AST_UNKNOWN = 0,
 	
-	//Simply passes the value through, needed for some precedence
-	AST_PASS,
-	
 	AST_IDENT = TK_IDENT,
 	AST_VALUE, AST_REFERENCE,
+	
+	//Simply passes the value through, needed for some precedence
+	AST_PASS,
 	
 	//Keywords to be used in the AST
 	AST_FOR = TK_FOR,
