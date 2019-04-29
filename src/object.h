@@ -21,6 +21,7 @@ typedef struct refcount_t {
 typedef enum object_type_t {
 	TYPE_UNKNOWN = 0,
 	TYPE_NULL,
+	TYPE_REFERENCE,
 	TYPE_INT,
 	TYPE_FLOAT,
 	TYPE_STRING,
@@ -58,6 +59,7 @@ int _winter_objectSub(winterState_t *state, object_t *a, object_t *b);
 int _winter_objectMul(winterState_t *state, object_t *a, object_t *b);
 int _winter_objectDiv(winterState_t *state, object_t *a, object_t *b);
 int _winter_objectMod(winterState_t *state, object_t *a, object_t *b);
+int _winter_objectPow(winterState_t *state, object_t *a, object_t *b);
 
 int _winter_objectAssign(winterState_t *state, object_t *a, object_t *b);
 

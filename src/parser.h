@@ -17,7 +17,7 @@ typedef enum ast_node_type_t {
 	AST_UNKNOWN = 0,
 	
 	AST_IDENT = TK_IDENT,
-	AST_VALUE, AST_REFERENCE,
+	AST_VALUE, /*AST_REFERENCE,*/
 	
 	//Simply passes the value through, needed for some precedence
 	AST_PASS,

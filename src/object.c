@@ -2,7 +2,17 @@
 #include "wstring.h"
 #include "table.h"
 
-#define typeof(o) (o->type)
+#include <math.h>
+
+#define typeof(o) ((o)->type)
+#define isNumeric(o) ((o)->type == TYPE_INT || (o)->type == TYPE_FLOAT)
+
+static inline object_t *deref(object_t *obj) {
+	if (obj->type == TYPE_REFERENCE) {
+		return obj->pointer;
+	}
+	return obj;
+}
 
 //djb2 by Dan Bernstein.
 hash_t _winter_hashCStr(const char *string) {
@@ -59,6 +69,8 @@ object_t *_winter_objectDelRef(winterState_t *state, object_t *obj) {
 
 bool_t _winter_objectComp(object_t *a, object_t *b) {
 	bool_t out = false;
+	a = deref(a);
+	b = deref(b);
 	if (a->type == b->type) {
 		switch (a->type) {
 			case TYPE_UNKNOWN: out = false; break;
@@ -100,6 +112,13 @@ void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t 
 			_winter_objectAddRef(state, dest);
 			break;
 		
+		case TK_STRING:
+			//TODO: run through and convert 
+			dest->pointer = _winter_stringCreateSize(state, token->cursor.pointer + 1, token->size - 2);
+			dest->type = TYPE_STRING;
+			_winter_objectAddRef(state, dest);
+			break;
+		
 		default:
 			*dest = (object_t){0};
 			break;
@@ -107,31 +126,39 @@ void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t 
 	return;
 }
 
-winterInt_t _winter_castInt(const object_t *object) {
-	switch (typeof(object)) {
+winterInt_t _winter_castInt(const object_t *obj) {
+	switch (typeof(obj)) {
 		case TYPE_INT:
-			return object->integer;
+			return obj->integer;
 		
 		case TYPE_FLOAT:
-			return (winterInt_t)object->floating;
+			return (winterInt_t)obj->floating;
+		
+		case TYPE_REFERENCE:
+			return _winter_castInt(obj->pointer);
 		
 		default: return 0;
 	}
 }
 
-winterFloat_t _winter_castFloat(const object_t *object) {
-	switch (typeof(object)) {
+winterFloat_t _winter_castFloat(const object_t *obj) {
+	switch (typeof(obj)) {
 		case TYPE_INT:
-			return (winterFloat_t)object->integer;
+			return (winterFloat_t)obj->integer;
 		
 		case TYPE_FLOAT:
-			return object->floating;
+			return obj->floating;
+		
+		case TYPE_REFERENCE:
+			return _winter_castFloat(obj->pointer);
 		
 		default: return 0;
 	}
 }
 
 int _winter_objectAdd(winterState_t *state, object_t *a, object_t *b) {
+	a = deref(a);
+	b = deref(b);
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) > TYPE_STRING || typeof(b) > TYPE_STRING) {
 			//error
@@ -150,6 +177,8 @@ int _winter_objectAdd(winterState_t *state, object_t *a, object_t *b) {
 	return OBJECT_ERROR_TYPE;
 }
 int _winter_objectSub(winterState_t *state, object_t *a, object_t *b) {
+	a = deref(a);
+	b = deref(b);
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) >= TYPE_STRING || typeof(b) >= TYPE_STRING) {
 			//error
@@ -165,6 +194,8 @@ int _winter_objectSub(winterState_t *state, object_t *a, object_t *b) {
 	return OBJECT_ERROR_TYPE;
 }
 int _winter_objectMul(winterState_t *state, object_t *a, object_t *b) {
+	a = deref(a);
+	b = deref(b);
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) >= TYPE_STRING || typeof(b) >= TYPE_STRING) {
 			//error
@@ -180,6 +211,8 @@ int _winter_objectMul(winterState_t *state, object_t *a, object_t *b) {
 	return OBJECT_ERROR_TYPE;
 }
 int _winter_objectDiv(winterState_t *state, object_t *a, object_t *b) {
+	a = deref(a);
+	b = deref(b);
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) >= TYPE_STRING || typeof(b) >= TYPE_STRING) {
 			//error
@@ -195,6 +228,8 @@ int _winter_objectDiv(winterState_t *state, object_t *a, object_t *b) {
 	return OBJECT_ERROR_TYPE;
 }
 int _winter_objectMod(winterState_t *state, object_t *a, object_t *b) {
+	a = deref(a);
+	b = deref(b);
 	if (typeof(a) > TYPE_NULL && typeof(b) > TYPE_NULL) {
 		if (typeof(a) >= TYPE_STRING || typeof(b) >= TYPE_STRING) {
 			//error
@@ -209,14 +244,34 @@ int _winter_objectMod(winterState_t *state, object_t *a, object_t *b) {
 	}
 	return OBJECT_ERROR_TYPE;
 }
+int _winter_objectPow(winterState_t *state, object_t *a, object_t *b) {
+	a = deref(a);
+	b = deref(b);
+	if (typeof(a) == TYPE_INT && typeof(b) == TYPE_INT) {
+		a->integer = (winterInt_t)(pow(_winter_castFloat(a), _winter_castFloat(b)) + 0.5);
+		return OBJECT_OK;
+	} else if (isNumeric(a) && isNumeric(b)) {
+		a->floating = (winterFloat_t)pow(_winter_castFloat(a), _winter_castFloat(b));
+		a->type = TYPE_FLOAT;
+		return OBJECT_OK;
+	}
+	return OBJECT_ERROR_TYPE;
+}
 
 int _winter_objectAssign(winterState_t *state, object_t *a, object_t *b) {
-	_winter_objectDelRef(state, a);
-	*a = *_winter_objectAddRef(state, b);
-	return OBJECT_OK;
+	if (a->type == TYPE_REFERENCE) {
+		object_t *ptr = a->pointer;
+		b = deref(b);
+		_winter_objectDelRef(state, ptr);
+		*ptr = *_winter_objectAddRef(state, b);
+		*a = *ptr;
+		return OBJECT_OK;
+	}
+	return OBJECT_ERROR_TYPE;
 }
 
 int _winter_objectNegate(winterState_t *state, object_t *a) {
+	a = deref(a);
 	switch(typeof(a)) {
 		case TYPE_FLOAT:
 			a->floating *= -1;

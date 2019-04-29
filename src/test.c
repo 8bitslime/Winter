@@ -16,9 +16,10 @@ static inline void printObject(object_t *obj) {
 	switch (obj->type) {
 		case TYPE_UNKNOWN: printf("unknown object!"); break;
 		case TYPE_NULL:    printf("null"); break;
+		case TYPE_REFERENCE: printf("ref -> "); printObject(obj->pointer); break;
 		case TYPE_INT:     printf("int: %llu", obj->integer); break;
 		case TYPE_FLOAT:   printf("float: %f", obj->floating); break;
-		case TYPE_STRING:  printf("\"%s\"", ((wstring_t*)obj->pointer)->data); break;
+		case TYPE_STRING:  printf("string: \"%s\"", ((wstring_t*)obj->pointer)->data); break;
 		default: printf("object type: %i", obj->type); break;
 	}
 }
@@ -70,9 +71,7 @@ int main(int argc, char **argv) {
 			printAST(node, 0);
 			
 			node = walkTree(state, node);
-			if (node->type == AST_REFERENCE) {
-				node->value = *(object_t*)(node->value.pointer);
-			}
+			
 			printObject(&node->value);
 			printf("\n");
 		}

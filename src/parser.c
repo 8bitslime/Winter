@@ -50,7 +50,7 @@ static const opinfo_t opinfo[] = {
 	op(AST_RSHIFTEQ, 2, right, NULL),
 	op(TK_INC,       2, right, NULL),
 	op(TK_DEC,       2, right, NULL),
-	op(AST_POW,      5, left,  NULL),
+	op(AST_POW,      5, left,  _winter_objectPow),
 	op(AST_ADDEQ,    2, left,  NULL),
 	op(AST_SUBEQ,    2, left,  NULL),
 	op(AST_MULEQ,    2, left,  NULL),
@@ -171,7 +171,6 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 					ast_node_t *append = tree;
 					//check associativity
 					if (associativity(node->type) == left) {
-						printf("lefty\n");
 						append = tail;
 					} else {
 						//higher precedence goes down the tree
@@ -211,8 +210,8 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 		}
 		
 		object_t *objs[] = {
-			left->type == AST_REFERENCE ? left->value.pointer : &left->value,
-			right ? (right->type == AST_REFERENCE ? right->value.pointer : &right->value) : NULL
+			&left->value,
+			right ? &right->value : NULL
 		};
 		
 		typedef int (*binary)(winterState_t *state, object_t *, object_t *);
@@ -220,21 +219,27 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 		
 		if (node->type >= AST_LSHIFTEQ) {
 			
+			int result;
+			
 			//DEBUG ONLY
 			if (function(node->type) == NULL) {
 				printf("function not implemented! %i\n", node->type);
-			} else
-			
-			if (isUnary(node->type)) {
-				((unary)function(node->type))(state, objs[0]);
+			} else if (isUnary(node->type)) {
+				result = ((unary)function(node->type))(state, objs[0]);
 			} else {
-				((binary)function(node->type))(state, objs[0], objs[1]);
+				result = ((binary)function(node->type))(state, objs[0], objs[1]);
+			}
+			
+			if (result != OBJECT_OK) {
+				//TODO: error object type
+				printf("type error!\n");
 			}
 		}
 		node->value = *objs[0];
 		
 		FREE(left);
 		if (right) {
+			_winter_objectDelRef(state, &right->value);
 			FREE(right);
 		}
 		
@@ -246,7 +251,8 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 			obj = _winter_tableInsert(state, state->globals, &node->value, NULL);
 		}
 		_winter_objectDelRef(state, &node->value);
-		node->type = AST_REFERENCE;
+		node->type = AST_VALUE;
+		node->value.type = TYPE_REFERENCE;
 		node->value.pointer = obj;
 	}
 	return node;

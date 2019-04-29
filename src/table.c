@@ -15,6 +15,7 @@ void _winter_tableFree(winterState_t *state, table_t *table) {
 	while (table->head != NULL) {
 		bucket_t *temp = table->head;
 		_winter_objectDelRef(state, &temp->key);
+		_winter_objectDelRef(state, &temp->value);
 		table->head = table->head->next;
 		FREE(temp);
 	}
@@ -59,7 +60,7 @@ object_t *_winter_tableInsert(winterState_t *state, table_t *table, object_t *ke
 	}
 	
 	if (value) {
-		bucket->value = *value;
+		bucket->value = *_winter_objectAddRef(state, value);
 	} else {
 		bucket->value = (object_t){ TYPE_NULL, {0} };
 	}

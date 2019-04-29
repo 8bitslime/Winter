@@ -136,7 +136,7 @@ static inline size_t lexString(lexState_t *lex) {
 	if (STRING[size] == '"') {
 		size = 1;
 		while(STRING[size] && STRING[size++] != '"') {
-			if (STRING[size] == '\\') size++;
+			if (STRING[size-1] == '\\') size += 1;
 		}
 		lex->lookahead.size = size;
 		lex->lookahead.type = TK_STRING;
