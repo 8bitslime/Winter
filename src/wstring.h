@@ -21,10 +21,11 @@ wstring_t *_winter_stringCreateSize(winterState_t *state, const char *string, si
 wstring_t *_winter_stringCreate(winterState_t *state, const char *string);
 void _winter_stringFree(winterState_t *state, wstring_t *string);
 
-wstring_t *_winter_stringDup(winterState_t *state, const wstring_t *string);
-
 hash_t _winter_stringHash(wstring_t *string);
 bool_t _winter_stringCompare(wstring_t *a, wstring_t *b);
+wstring_t *_winter_stringDup(winterState_t *state, const wstring_t *string);
+wstring_t *_winter_stringCat(winterState_t *state, wstring_t *a, wstring_t *b);
+
 
 
 #endif

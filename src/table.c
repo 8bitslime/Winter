@@ -12,11 +12,12 @@ table_t *_winter_tableAlloc(winterState_t *state, size_t capacity) {
 	return out;
 }
 void _winter_tableFree(winterState_t *state, table_t *table) {
-	while (table->head != NULL) {
-		bucket_t *temp = table->head;
-		_winter_objectDelRef(state, &temp->key);
-		_winter_objectDelRef(state, &temp->value);
-		table->head = table->head->next;
+	bucket_t *list = table->head;
+	while (list != NULL) {
+		_winter_objectDelRef(state, &list->key);
+		_winter_objectDelRef(state, &list->value);
+		bucket_t *temp = list;
+		list = list->next;
 		FREE(temp);
 	}
 	if (table->buckets != NULL) {

@@ -31,11 +31,6 @@ void _winter_stringFree(winterState_t *state, wstring_t *string) {
 	FREE(string);
 }
 
-wstring_t *_winter_stringDup(winterState_t *state, const wstring_t *string) {
-	wstring_t *out = _winter_stringCreateSize(state, string->data, string->length);
-	return out;
-}
-
 bool_t _winter_stringCompare(wstring_t *a, wstring_t *b) {
 	if (a == b) {
 		return true;
@@ -45,4 +40,19 @@ bool_t _winter_stringCompare(wstring_t *a, wstring_t *b) {
 		}
 	}
 	return false;
+}
+
+wstring_t *_winter_stringDup(winterState_t *state, const wstring_t *string) {
+	wstring_t *out = _winter_stringCreateSize(state, string->data, string->length);
+	return out;
+}
+
+wstring_t *_winter_stringCat(winterState_t *state, wstring_t *a, wstring_t *b) {
+	size_t required = a->length + b->length + 1;
+	wstring_t *out = _winter_stringAlloc(state, required);
+	memcpy(out->data, a->data, a->length);
+	memcpy(out->data + a->length, b->data, b->length);
+	out->length = required-1;
+	out->data[required-1] = '\0';
+	return out;
 }

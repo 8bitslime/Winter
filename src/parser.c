@@ -244,6 +244,7 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 		}
 		
 		node->type = AST_VALUE;
+		node->numNodes = 0;
 	} else if (node->type == AST_IDENT) {
 		object_t *obj = _winter_tableGetObject(state->globals, &node->value);
 		if (obj == NULL) {

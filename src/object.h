@@ -29,12 +29,14 @@ typedef enum object_type_t {
 	TYPE_FUNCTION
 } object_type_t;
 
+typedef struct wstring_t wstring_t;
 typedef struct object_t {
 	object_type_t type;
 	union {
 		winterInt_t integer;
 		winterFloat_t floating;
 		void *pointer;
+		wstring_t *string;
 	};
 } object_t;
 

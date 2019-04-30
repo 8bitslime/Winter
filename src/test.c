@@ -73,6 +73,7 @@ int main(int argc, char **argv) {
 			node = walkTree(state, node);
 			
 			printObject(&node->value);
+			_winter_objectDelRef(state, &node->value);
 			printf("\n");
 		}
 		
