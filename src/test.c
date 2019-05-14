@@ -15,11 +15,12 @@ static int frees  = 0;
 static inline void printObject(object_t *obj) {
 	switch (obj->type) {
 		case TYPE_UNKNOWN: printf("unknown object!"); break;
+		case TYPE_ERROR:   printf("error: %s", obj->string->data); break;
 		case TYPE_NULL:    printf("null"); break;
 		case TYPE_REFERENCE: printf("ref -> "); printObject(obj->pointer); break;
-		case TYPE_INT:     printf("int: %llu", obj->integer); break;
+		case TYPE_INT:     printf("int: %lli", obj->integer); break;
 		case TYPE_FLOAT:   printf("float: %f", obj->floating); break;
-		case TYPE_STRING:  printf("string: \"%s\"", ((wstring_t*)obj->pointer)->data); break;
+		case TYPE_STRING:  printf("string: \"%s\"", obj->string->data); break;
 		default: printf("object type: %i", obj->type); break;
 	}
 }
@@ -33,7 +34,7 @@ static inline void printAST(ast_node_t *tree, int level) {
 		for (int i = 0; i < tree->numNodes; i++) {
 			printAST(tree->children[i], level + 1);
 		}
-	} else {
+	} else if (tree->type != AST_ERROR){
 		printObject(&tree->value);
 		printf("\n");
 	}
@@ -75,9 +76,9 @@ int main(int argc, char **argv) {
 			printObject(&node->value);
 			printf("\n");
 			_winter_objectDelRef(state, &node->value);
+			FREE(node);
 		}
 		
-		allocator(node, 0);
 	}
 	
 	winterFreeState(state);

@@ -20,13 +20,14 @@ typedef struct refcount_t {
 
 typedef enum object_type_t {
 	TYPE_UNKNOWN = 0,
-	TYPE_NULL,
 	TYPE_REFERENCE,
+	TYPE_NULL,
 	TYPE_INT,
 	TYPE_FLOAT,
 	TYPE_STRING,
 	TYPE_TABLE,
-	TYPE_FUNCTION
+	TYPE_FUNCTION,
+	TYPE_ERROR
 } object_type_t;
 
 typedef struct wstring_t wstring_t;
@@ -48,6 +49,8 @@ void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t 
 
 winterInt_t   _winter_castInt(const object_t *object);
 winterFloat_t _winter_castFloat(const object_t *object);
+
+void _winter_objectNewError(winterState_t *state, object_t *dest, const char *format, ...);
 
 object_t *_winter_objectAddRef(winterState_t *state, object_t *obj);
 object_t *_winter_objectDelRef(winterState_t *state, object_t *obj);

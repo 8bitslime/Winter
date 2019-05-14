@@ -5,14 +5,18 @@
 
 //creates or resizes a node
 //TODO: maybe make custom allocator
-static ast_node_t *allocNode(winterState_t *state, ast_node_t *node, size_t size) {
+//TODO: node resizing
+static inline ast_node_t *allocNode(winterState_t *state, ast_node_t *node, size_t size) {
 	ast_node_t *ret = MALLOC(sizeof(ast_node_t) + sizeof(ast_node_t*) * size);
 	ret->numNodes = size;
 	ret->children = (ast_node_t**)(ret + 1);
+	for (size_t i = 0; i < size; i++) {
+		ret->children[i] = NULL;
+	}
 	return ret;
 }
 
-static ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
+static inline ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
 	ast_node_t *ret;
 	if (token->type == TK_LPAREN) {
 		ret = allocNode(state, NULL, 1);
@@ -28,11 +32,29 @@ static ast_node_t *createEprNode(winterState_t *state, const token_t *token) {
 	return ret;
 }
 
-static ast_node_t *createOprNode(winterState_t *state, ast_node_type_t type) {
+static inline ast_node_t *createOprNode(winterState_t *state, ast_node_type_t type) {
 	size_t size = isUnary(type) ? 1 : 2;
 	ast_node_t *ret = allocNode(state, NULL, size);
 	ret->type = type;
 	return ret;
+}
+
+static inline ast_node_t *createErrorNode(winterState_t *state) {
+	ast_node_t *ret = allocNode(state, NULL, 0);
+	ret->type = AST_ERROR;
+	return ret;
+}
+
+static inline void freeTree(winterState_t *state, ast_node_t *tree) {
+	if (tree != NULL) {
+		for (size_t i = 0; i < tree->numNodes; i++) {
+			freeTree(state, tree->children[i]);
+		}
+		if (isManaged(tree->type)) { 
+			_winter_objectDelRef(state, &tree->value);
+		}
+		FREE(tree);
+	}
 }
 
 typedef void (*func_ptr_void_t)(void);
@@ -96,7 +118,6 @@ static inline int precedence(ast_node_type_t operator) {
 static inline int associativity(ast_node_type_t operator) {
 	return opinfo[operator - AST_LSHIFTEQ].associativity;
 }
-
 static inline func_ptr_void_t function(ast_node_type_t operator) {
 	return opinfo[operator - AST_LSHIFTEQ].function;
 }
@@ -110,7 +131,9 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 		operator
 	} expect = expression;
 	
-	while (_winter_lexNext(lex)) {
+	//Will either return a proper expression or error
+	while (true) {
+		_winter_lexNext(lex);
 		token_t *token = &lex->current;
 		
 		if (expect == expression) {
@@ -123,8 +146,11 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 					//parenthesis parsing
 					node->children[0] = parseExpression(state, lex);
 					if (lex->current.type != TK_RPAREN) {
-						printf("expected closing parenthesis!\n");
-						return NULL;
+						ast_node_t *error = createErrorNode(state);
+						_winter_objectNewError(state, &error->value, "expected closing parenthesis");
+						freeTree(state, tree);
+						freeTree(state, node);
+						return error;
 					}
 				}
 				
@@ -150,10 +176,15 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 				//Don't change 'expect' because we still want an expression next
 				
 			} else {
-				//TODO: error handling and unary operators
-				printf("expected expression!\n");
-				return NULL;
-				//Eventually going to make an error type node to return
+				if (tree == NULL) {
+					return NULL;
+				} else {
+					ast_node_t *error = createErrorNode(state);
+					//TODO: line numbers and other debug stuff
+					_winter_objectNewError(state, &error->value, "expected an expression");
+					freeTree(state, tree);
+					return error;
+				}
 			}
 			
 		} else {
@@ -194,61 +225,81 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 	return tree;
 }
 
+static inline ast_node_t *parseStatement(winterState_t *state, lexState_t *lex) {
+	return parseExpression(state, lex);
+}
+
 ast_node_t *_winter_generateTree(winterState_t *state, const char *source) {
 	lexState_t lex = {source};
 	_winter_lexNext(&lex);
-	return parseExpression(state, &lex);
+	return parseStatement(state, &lex);
 }
 
 //Temporary for testing
 ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 	if (isOperator(node->type)) {
-		ast_node_t *left  = walkTree(state, node->children[0]);
-		ast_node_t *right = NULL;
-		if (node->numNodes == 2) {
-			right = walkTree(state, node->children[1]);
+		ast_node_t *nodes[2] = {
+			walkTree(state, node->children[0]),
+			NULL
+		};
+		
+		//check if the left side is an error
+		if (nodes[0]->type == AST_ERROR) {
+			node->children[0] = NULL;
+			freeTree(state, node);
+			return nodes[0];
 		}
 		
-		object_t *objs[] = {
-			&left->value,
-			right ? &right->value : NULL
-		};
+		if (node->numNodes == 2) {
+			nodes[1] = walkTree(state, node->children[1]);
+			
+			//check if the right side is an error
+			if (nodes[1]->type == AST_ERROR) {
+				node->children[1] = NULL;
+				freeTree(state, node);
+				return nodes[1];
+			}
+		}
 		
 		typedef int (*binary)(winterState_t *state, object_t *, object_t *);
 		typedef int (*unary) (winterState_t *state, object_t *);
 		
-		if (node->type >= AST_LSHIFTEQ) {
-			
-			int result;
-			
+		int result = OBJECT_OK;
+		
+		//TODO: remove PASS during optimization phase
+		if (nodes[0]->type != AST_PASS) {
 			//DEBUG ONLY
 			if (function(node->type) == NULL) {
 				printf("function not implemented! %i\n", node->type);
 			} else if (isUnary(node->type)) {
-				result = ((unary)function(node->type))(state, objs[0]);
+				result = ((unary)function(node->type))(state, &nodes[0]->value);
 			} else {
-				result = ((binary)function(node->type))(state, objs[0], objs[1]);
-			}
-			
-			if (result != OBJECT_OK) {
-				//TODO: error object type
-				printf("type error!\n");
+				result = ((binary)function(node->type))(state, &nodes[0]->value, &nodes[1]->value);
 			}
 		}
-		node->value = *objs[0];
 		
-		FREE(left);
-		if (right) {
-			_winter_objectDelRef(state, &right->value);
-			FREE(right);
+		if (result != OBJECT_OK) {
+			_winter_objectDelRef(state, &nodes[0]->value);
+			//TODO: better formatting, example: "operator '+' incompatible with types 'table' and 'int'"
+			//Possible line numbers and other debugging stuff
+			_winter_objectNewError(state, &node->value, "incompatible type");
+			node->type = AST_ERROR;
+		} else {
+			node->value = nodes[0]->value;
+			node->type = AST_VALUE;
 		}
-		
-		node->type = AST_VALUE;
 		node->numNodes = 0;
+		
+		FREE(nodes[0]);
+		if (nodes[1] != NULL) {
+			_winter_objectDelRef(state, &nodes[1]->value);
+			FREE(nodes[1]);
+		}
+		
 	} else if (node->type == AST_IDENT) {
 		object_t *obj = _winter_tableGetObject(state->globals, &node->value);
 		if (obj == NULL) {
-			//Undefined, just make it anyway who cares atm
+			//Undeclared, just make it anyway who cares atm
 			obj = _winter_tableInsert(state, state->globals, &node->value, NULL);
 		}
 		_winter_objectDelRef(state, &node->value);

@@ -13,17 +13,23 @@
 
 #define isExpression(t) ((token_type_t)(t) == TK_LPAREN || ((token_type_t)(t) >= TK_IDENT && (token_type_t)(t) <= TK_STRING))
 
+//True if the node type has a memory managed value
+#define isManaged(t) ((t) >= AST_IDENT && (t) <= AST_ERROR)
+
 typedef enum ast_node_type_t {
 	AST_UNKNOWN = 0,
 	
 	AST_IDENT = TK_IDENT,
-	AST_VALUE, /*AST_REFERENCE,*/
+	AST_VALUE, AST_ERROR,
+	
+	//Code block with multiple lines
+	AST_BLOCK,
 	
 	//Simply passes the value through, needed for some precedence
 	AST_PASS,
 	
 	//Keywords to be used in the AST
-	AST_FOR = TK_FOR,
+	AST_FOR = TK_FOR, AST_LET = TK_LET,
 	
 	//Operators, just coppied over except for a few semantics
 	AST_LSHIFTEQ = TK_LSHIFTEQ, AST_RSHIFTEQ = TK_RSHIFTEQ,
