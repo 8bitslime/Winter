@@ -6,7 +6,7 @@
 #include "object.h"
 
 #define isOperator(t) (((token_type_t)(t) >= TK_LSHIFTEQ && (token_type_t)(t) <= TK_BITNOT) || \
-					  (ast_node_type_t)(t) == AST_NEGATE || (ast_node_type_t)(t) == AST_PASS)
+					  (ast_node_type_t)(t) == AST_NEGATE)
 
 #define isUnarySymbol(t) ((t) == TK_SUB || (t) == TK_NOT)
 #define isUnary(t)       ((t) == AST_NOT || (t) == AST_NEGATE)

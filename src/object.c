@@ -50,10 +50,9 @@ void _winter_objectNewError(winterState_t *state, object_t *dest, const char *fo
 	
 	wstring_t *string = _winter_stringAlloc(state, size + 1);
 	string->length = size;
-	string->data[size] = '\0';
 	
 	va_start(args, format);
-	vsnprintf(string->data, size, format, args);
+	vsnprintf(string->data, size + 1, format, args);
 	va_end(args);
 	
 	dest->type = TYPE_ERROR;
@@ -171,9 +170,6 @@ winterFloat_t _winter_castFloat(const object_t *obj) {
 		case TYPE_FLOAT:
 			return obj->floating;
 		
-		case TYPE_REFERENCE:
-			return _winter_castFloat(obj->pointer);
-		
 		default: return 0;
 	}
 }
@@ -199,12 +195,12 @@ int _winter_objectAdd(winterState_t *state, object_t *a, object_t *b) {
 			*out = *_winter_objectAddRef(state, &temp);
 			return OBJECT_OK;
 		} else if (typeof(a) == TYPE_FLOAT || typeof(b) == TYPE_FLOAT) {
-			out->type = TYPE_FLOAT;
 			out->floating = _winter_castFloat(a) + _winter_castFloat(b);
+			out->type = TYPE_FLOAT;
 			return OBJECT_OK;
 		} else if (typeof(a) == TYPE_INT && typeof(b) == TYPE_INT) {
-			out->type = TYPE_INT;
 			out->integer = a->integer + b->integer;
+			out->type = TYPE_INT;
 			return OBJECT_OK;
 		}
 	}
@@ -219,12 +215,12 @@ int _winter_objectSub(winterState_t *state, object_t *a, object_t *b) {
 			//error
 			return OBJECT_ERROR_TYPE;
 		} else if (typeof(a) == TYPE_FLOAT || typeof(b) == TYPE_FLOAT) {
-			out->type = TYPE_FLOAT;
 			out->floating = _winter_castFloat(a) - _winter_castFloat(b);
+			out->type = TYPE_FLOAT;
 			return OBJECT_OK;
 		} else if (typeof(a) == TYPE_INT && typeof(b) == TYPE_INT) {
-			out->type = TYPE_INT;
 			out->integer = a->integer - b->integer;
+			out->type = TYPE_INT;
 			return OBJECT_OK;
 		}
 	}
@@ -239,12 +235,12 @@ int _winter_objectMul(winterState_t *state, object_t *a, object_t *b) {
 			//error
 			return OBJECT_ERROR_TYPE;
 		} else if (typeof(a) == TYPE_FLOAT || typeof(b) == TYPE_FLOAT) {
-			out->type = TYPE_FLOAT;
 			out->floating = _winter_castFloat(a) * _winter_castFloat(b);
+			out->type = TYPE_FLOAT;
 			return OBJECT_OK;
 		} else if (typeof(a) == TYPE_INT && typeof(b) == TYPE_INT) {
-			out->type = TYPE_INT;
 			out->integer = a->integer * b->integer;
+			out->type = TYPE_INT;
 			return OBJECT_OK;
 		}
 	}
@@ -259,11 +255,12 @@ int _winter_objectDiv(winterState_t *state, object_t *a, object_t *b) {
 			//error
 			return OBJECT_ERROR_TYPE;
 		} else if (typeof(a) == TYPE_FLOAT || typeof(b) == TYPE_FLOAT) {
-			out->type = TYPE_FLOAT;
 			out->floating = _winter_castFloat(a) / _winter_castFloat(b);
+			out->type = TYPE_FLOAT;
 			return OBJECT_OK;
 		} else if (typeof(a) == TYPE_INT && typeof(b) == TYPE_INT) {
-			a->integer /= b->integer;
+			out->integer = a->integer / b->integer;
+			out->type = TYPE_INT;
 			return OBJECT_OK;
 		}
 	}
@@ -278,12 +275,12 @@ int _winter_objectMod(winterState_t *state, object_t *a, object_t *b) {
 			//error
 			return OBJECT_ERROR_TYPE;
 		} else if (typeof(a) == TYPE_FLOAT || typeof(b) == TYPE_FLOAT) {
-			out->type = TYPE_FLOAT;
 			out->floating = 0.0;
+			out->type = TYPE_FLOAT;
 			return OBJECT_OK;
 		} else if (typeof(a) == TYPE_INT && typeof(b) == TYPE_INT) {
-			out->type = TYPE_INT;
 			out->integer = a->integer % b->integer;
+			out->type = TYPE_INT;
 			return OBJECT_OK;
 		}
 	}
@@ -294,12 +291,12 @@ int _winter_objectPow(winterState_t *state, object_t *a, object_t *b) {
 	a = deref(a);
 	b = deref(b);
 	if (typeof(a) == TYPE_INT && typeof(b) == TYPE_INT) {
-		out->type = TYPE_INT;
 		out->integer = (winterInt_t)(pow(_winter_castFloat(a), _winter_castFloat(b)) + 0.5);
+		out->type = TYPE_INT;
 		return OBJECT_OK;
 	} else if (isNumeric(a) && isNumeric(b)) {
-		out->type = TYPE_FLOAT;
 		out->floating = (winterFloat_t)pow(_winter_castFloat(a), _winter_castFloat(b));
+		out->type = TYPE_FLOAT;
 		return OBJECT_OK;
 	}
 	return OBJECT_ERROR_TYPE;

@@ -29,12 +29,17 @@ static inline void printAST(ast_node_t *tree, int level) {
 	for (int i = 1; i <= level; i++) {
 		printf("    |");
 	}
-	if (isOperator(tree->type)) {
+	if (isOperator(tree->type) || tree->type == AST_PASS) {
 		printf("opr: %i\n", tree->type);
 		for (int i = 0; i < tree->numNodes; i++) {
 			printAST(tree->children[i], level + 1);
 		}
-	} else if (tree->type != AST_ERROR){
+	} else if (tree->type == AST_BLOCK) {
+		printf("block:\n");
+		for (size_t i = 0; i < tree->numNodes; i++) {
+			printAST(tree->children[i], level + 1);
+		}
+	} else if (tree->type != AST_ERROR) {
 		printObject(&tree->value);
 		printf("\n");
 	}
@@ -78,7 +83,6 @@ int main(int argc, char **argv) {
 			_winter_objectDelRef(state, &node->value);
 			FREE(node);
 		}
-		
 	}
 	
 	winterFreeState(state);

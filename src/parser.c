@@ -7,10 +7,15 @@
 //TODO: maybe make custom allocator
 //TODO: node resizing
 static inline ast_node_t *allocNode(winterState_t *state, ast_node_t *node, size_t size) {
-	ast_node_t *ret = MALLOC(sizeof(ast_node_t) + sizeof(ast_node_t*) * size);
+	size_t original = 0;
+	if (node != NULL) {
+		original = node->numNodes;
+	}
+	
+	ast_node_t *ret = REALLOC(node, sizeof(ast_node_t) + sizeof(ast_node_t*) * size);
 	ret->numNodes = size;
 	ret->children = (ast_node_t**)(ret + 1);
-	for (size_t i = 0; i < size; i++) {
+	for (size_t i = original; i < size; i++) {
 		ret->children[i] = NULL;
 	}
 	return ret;
@@ -132,112 +137,199 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 	} expect = expression;
 	
 	//Will either return a proper expression or error
-	while (true) {
-		_winter_lexNext(lex);
-		token_t *token = &lex->current;
-		
-		if (expect == expression) {
-			//expression
-			if (isExpression(token->type)) {
-				//Add expression to bottom of tree
-				ast_node_t *node = createEprNode(state, token);
-				
-				if (token->type == TK_LPAREN) {
-					//parenthesis parsing
-					node->children[0] = parseExpression(state, lex);
-					if (lex->current.type != TK_RPAREN) {
+	if (isExpression(lex->lookahead.type)) {
+		while (true) {
+			token_t *token = &lex->lookahead;
+			
+			if (expect == expression) {
+				//expression
+				if (isExpression(token->type)) {
+					//Add expression to bottom of tree
+					ast_node_t *node = createEprNode(state, token);
+					
+					if (token->type == TK_LPAREN) {
+						//parenthesis parsing
+						ast_node_t *parens = parseExpression(state, lex);
+						
+						//TODO: make this more elegant
+						if (parens == NULL) {
+							ast_node_t *error = createErrorNode(state);
+							_winter_objectNewError(state, &error->value, "expected an expression");
+							freeTree(state, tree);
+							FREE(node);
+							return error;
+						} else if (parens->type == AST_ERROR) {
+							freeTree(state, tree);
+							FREE(node);
+							return parens;
+						} else if (lex->current.type != TK_RPAREN) {
+							ast_node_t *error = createErrorNode(state);
+							_winter_objectNewError(state, &error->value, "expected closing parenthesis");
+							freeTree(state, tree);
+							freeTree(state, parens);
+							FREE(node);
+							return error;
+						}
+						
+						node->children[0] = parens;
+					}
+					
+					if (tree == NULL) {
+						tree = node;
+					} else {
+						tail->children[tail->numNodes - 1] = node;
+					}
+					expect = operator;
+				} else if (isUnarySymbol(token->type)) {
+					//Add unary operator
+					//TODO: unary precedence
+					if (token->type == TK_SUB) {
+						token->type = AST_NEGATE;
+					}
+					ast_node_t *node = createOprNode(state, token->type);
+					if (tree == NULL) {
+						tree = node;
+					} else {
+						tail->children[tail->numNodes - 1] = node;
+					}
+					tail = node;
+					//Don't change 'expect' because we still want an expression next
+					
+				} else {
+					if (tree == NULL) {
+						return NULL;
+					} else {
 						ast_node_t *error = createErrorNode(state);
-						_winter_objectNewError(state, &error->value, "expected closing parenthesis");
+						//TODO: line numbers and other debug stuff
+						_winter_objectNewError(state, &error->value, "expected an expression");
 						freeTree(state, tree);
-						freeTree(state, node);
 						return error;
 					}
 				}
 				
-				if (tree == NULL) {
-					tree = node;
-				} else {
-					tail->children[tail->numNodes - 1] = node;
-				}
-				expect = operator;
-			} else if (isUnarySymbol(token->type)) {
-				//Add unary operator
-				//TODO: unary precedence
-				if (token->type == TK_SUB) {
-					token->type = AST_NEGATE;
-				}
-				ast_node_t *node = createOprNode(state, token->type);
-				if (tree == NULL) {
-					tree = node;
-				} else {
-					tail->children[tail->numNodes - 1] = node;
-				}
-				tail = node;
-				//Don't change 'expect' because we still want an expression next
-				
 			} else {
-				if (tree == NULL) {
-					return NULL;
-				} else {
-					ast_node_t *error = createErrorNode(state);
-					//TODO: line numbers and other debug stuff
-					_winter_objectNewError(state, &error->value, "expected an expression");
-					freeTree(state, tree);
-					return error;
-				}
-			}
-			
-		} else {
-			//operator
-			if (isOperator(token->type)) {
-				ast_node_t *node = createOprNode(state, token->type);
-				int priority = precedence(node->type);
-				
-				//operator precedence in place
-				if (isExpression(tree->type) || (associativity(node->type) && priority <= precedence(tree->type))) {
-					node->children[0] = tree;
-					tree = node;
-					tail = node;
-				} else {
-					ast_node_t *append = tree;
-					//check associativity
-					if (associativity(node->type) == left) {
-						append = tail;
+				//operator
+				if (isOperator(token->type)) {
+					ast_node_t *node = createOprNode(state, token->type);
+					int priority = precedence(node->type);
+					
+					//operator precedence in place
+					if (isExpression(tree->type) || (associativity(node->type) && priority <= precedence(tree->type))) {
+						node->children[0] = tree;
+						tree = node;
+						tail = node;
 					} else {
-						//higher precedence goes down the tree
-						while (priority > precedence(append->children[append->numNodes - 1]->type)) {
-							append = append->children[append->numNodes - 1];
+						ast_node_t *append = tree;
+						//check associativity
+						if (associativity(node->type) == left) {
+							append = tail;
+						} else {
+							//higher precedence goes down the tree
+							while (priority > precedence(append->children[append->numNodes - 1]->type)) {
+								append = append->children[append->numNodes - 1];
+							}
 						}
+						node->children[0] = append->children[append->numNodes - 1];
+						append->children[append->numNodes - 1] = node;
+						tail = node;
 					}
-					node->children[0] = append->children[append->numNodes - 1];
-					append->children[append->numNodes - 1] = node;
-					tail = node;
+					
+					expect = expression;
+				} else {
+					//current expression is done
+					break;
 				}
-				
-				expect = expression;
-			} else {
-				//current expression is done
-				break;
 			}
+			_winter_lexNext(lex);
 		}
 	}
-	
 	return tree;
 }
 
+static inline ast_node_t *parseLet(winterState_t *state, lexState_t *lex) {
+	ast_node_t *ret = NULL;
+	if (lex->lookahead.type == TK_LET) {
+		_winter_lexNext(lex);
+		if (lex->lookahead.type == TK_IDENT) {
+			_winter_lexNext(lex);
+			//TODO: check out of memory
+			ret = allocNode(state, NULL, 1);
+			ret->children[0] = createEprNode(state, &lex->current);
+		} else {
+			//Incorrect let statement
+			ret = createErrorNode(state);
+			_winter_objectNewError(state, &ret->value, "expected an identifier");
+		}
+	}
+	return ret;
+}
+
 static inline ast_node_t *parseStatement(winterState_t *state, lexState_t *lex) {
-	return parseExpression(state, lex);
+	ast_node_t *statement = NULL;
+	
+	//TODO: probably just use goto here, this is weird
+	do {
+		statement = parseLet(state, lex);
+		if (statement != NULL) break;
+		
+		statement = parseExpression(state, lex);
+		if (statement != NULL) break;
+	} while (0);
+	
+	if (statement != NULL && statement->type == AST_ERROR) {
+		return statement;
+	}
+	
+	if (lex->lookahead.type == TK_SEMICOLON) {
+		_winter_lexNext(lex);
+	} else {
+		freeTree(state, statement);
+		statement = createErrorNode(state);
+		_winter_objectNewError(state, &statement->value, "expected a semicolon");
+	}
+	
+	return statement;
+}
+
+static inline ast_node_t *parseBlock(winterState_t *state, lexState_t *lex, token_type_t stop) {
+	size_t size = 0;
+	ast_node_t *block = NULL;
+	while (lex->lookahead.type != stop) {
+		ast_node_t *temp = parseStatement(state, lex);
+		if (temp != NULL) {
+			if (temp->type == AST_ERROR) {
+				freeTree(state, block);
+				return temp;
+			}
+			
+			block = allocNode(state, block, ++size);
+			block->type = AST_BLOCK;
+			block->children[size - 1] = temp;
+		}
+	}
+	_winter_lexNext(lex);
+	return block;
 }
 
 ast_node_t *_winter_generateTree(winterState_t *state, const char *source) {
 	lexState_t lex = {source};
 	_winter_lexNext(&lex);
-	return parseStatement(state, &lex);
+	return parseBlock(state, &lex, TK_EOF);
 }
 
 //Temporary for testing
 ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
-	if (isOperator(node->type)) {
+	if (node->type == AST_BLOCK) {
+		ast_node_t *result = NULL;
+		for (size_t i = 0; i < node->numNodes; i++) {
+			freeTree(state, result);
+			result = walkTree(state, node->children[i]);
+			node->children[i] = NULL;
+			if (result->type == AST_ERROR) break;
+		}
+		freeTree(state, node);
+		return result;
+	} else if (isOperator(node->type)) {
 		ast_node_t *nodes[2] = {
 			walkTree(state, node->children[0]),
 			NULL
@@ -271,6 +363,7 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 			//DEBUG ONLY
 			if (function(node->type) == NULL) {
 				printf("function not implemented! %i\n", node->type);
+				result = OBJECT_ERROR_TYPE;
 			} else if (isUnary(node->type)) {
 				result = ((unary)function(node->type))(state, &nodes[0]->value);
 			} else {
@@ -295,7 +388,10 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 			_winter_objectDelRef(state, &nodes[1]->value);
 			FREE(nodes[1]);
 		}
-		
+	} else if (node->type == AST_PASS) {
+		ast_node_t *out = walkTree(state, node->children[0]);
+		FREE(node);
+		node = out;
 	} else if (node->type == AST_IDENT) {
 		object_t *obj = _winter_tableGetObject(state->globals, &node->value);
 		if (obj == NULL) {
