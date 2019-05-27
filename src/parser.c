@@ -149,6 +149,7 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 					
 					if (token->type == TK_LPAREN) {
 						//parenthesis parsing
+						_winter_lexNext(lex);
 						ast_node_t *parens = parseExpression(state, lex);
 						
 						//TODO: make this more elegant
@@ -162,7 +163,7 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 							freeTree(state, tree);
 							FREE(node);
 							return parens;
-						} else if (lex->current.type != TK_RPAREN) {
+						} else if (lex->lookahead.type != TK_RPAREN) {
 							ast_node_t *error = createErrorNode(state);
 							_winter_objectNewError(state, &error->value, "expected closing parenthesis");
 							freeTree(state, tree);
