@@ -60,7 +60,7 @@ object_t *_winter_tableInsert(winterState_t *state, table_t *table, object_t *ke
 		}
 	}
 	
-	if (value) {
+	if (value != NULL) {
 		bucket->value = *_winter_objectAddRef(state, value);
 	} else {
 		bucket->value = (object_t){ TYPE_NULL, {0} };

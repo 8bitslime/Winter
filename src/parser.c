@@ -138,7 +138,7 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 	
 	//Will either return a proper expression or error
 	if (isExpression(lex->lookahead.type)) {
-		while (true) {
+		while (lex->lookahead.type != TK_EOF) {
 			token_t *token = &lex->lookahead;
 			
 			if (expect == expression) {
@@ -248,19 +248,30 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 }
 
 static inline ast_node_t *parseLet(winterState_t *state, lexState_t *lex) {
+	size_t size = 0;
 	ast_node_t *ret = NULL;
 	if (lex->lookahead.type == TK_LET) {
 		_winter_lexNext(lex);
-		if (lex->lookahead.type == TK_IDENT) {
+			
+		while (lex->lookahead.type == TK_IDENT) {
 			_winter_lexNext(lex);
 			//TODO: check out of memory
-			ret = allocNode(state, NULL, 1);
-			ret->children[0] = createEprNode(state, &lex->current);
-		} else {
-			//Incorrect let statement
-			ret = createErrorNode(state);
-			_winter_objectNewError(state, &ret->value, "expected an identifier");
+			ret = allocNode(state, NULL, ++size);
+			ret->type = AST_LET;
+			ret->children[size - 1] = createEprNode(state, &lex->current);
+			
+			if (lex->lookahead.type == TK_COMMA) {
+				_winter_lexNext(lex);
+				continue;
+			}
+			
+			return ret;
 		}
+		
+		//Incorrect let statement
+		freeTree(state, ret);
+		ret = createErrorNode(state);
+		_winter_objectNewError(state, &ret->value, "expected an identifier");
 	}
 	return ret;
 }
@@ -393,16 +404,28 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 		ast_node_t *out = walkTree(state, node->children[0]);
 		FREE(node);
 		node = out;
+	} else if (node->type == AST_LET) {
+		for (size_t i = 0; i < node->numNodes; i++) {
+			_winter_tableInsert(state, state->globals, &(node->children[i]->value), NULL);
+			freeTree(state, node->children[i]);
+		}
+		node->type  = AST_VALUE; 
+		node->value = (object_t){TYPE_NULL};
 	} else if (node->type == AST_IDENT) {
 		object_t *obj = _winter_tableGetObject(state->globals, &node->value);
 		if (obj == NULL) {
-			//Undeclared, just make it anyway who cares atm
-			obj = _winter_tableInsert(state, state->globals, &node->value, NULL);
+			//Undeclared identifier
+			object_t error;
+			_winter_objectNewError(state, &error, "undeclared identifier '%s'", node->value.string->data);
+			_winter_objectDelRef(state, &node->value);
+			node->type = AST_ERROR;
+			node->value = error;
+		} else {
+			_winter_objectDelRef(state, &node->value);
+			node->type = AST_VALUE;
+			node->value.type = TYPE_REFERENCE;
+			node->value.pointer = obj;
 		}
-		_winter_objectDelRef(state, &node->value);
-		node->type = AST_VALUE;
-		node->value.type = TYPE_REFERENCE;
-		node->value.pointer = obj;
 	}
 	return node;
 }

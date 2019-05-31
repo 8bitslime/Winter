@@ -15,6 +15,7 @@ set(WINTER_SOURCES
 
 if (NOT MSVC)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -pedantic")
+	# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -Os -march=native")
 endif()
 
 add_executable(${PROJECT_NAME} ${WINTER_SOURCES})

@@ -39,9 +39,16 @@ static inline void printAST(ast_node_t *tree, int level) {
 		for (size_t i = 0; i < tree->numNodes; i++) {
 			printAST(tree->children[i], level + 1);
 		}
-	} else if (tree->type != AST_ERROR) {
+	} else if (tree->type == AST_IDENT || tree->type == AST_VALUE) {
 		printObject(&tree->value);
 		printf("\n");
+	} else if (tree->type == AST_LET) {
+		printf("let:\n");
+		for (size_t i = 0; i < tree->numNodes; i++) {
+			printAST(tree->children[i], level + 1);
+		}
+	} else {
+		printf("unkown node type: %i\n", tree->type);
 	}
 }
 
@@ -71,6 +78,13 @@ int main(int argc, char **argv) {
 		printf(">> ");
 		if (fgets(buffer, 512, stdin) == NULL) continue;
 		if (strncmp(buffer, "exit\n", 5) == 0) break;
+		
+		size_t length = strlen(buffer);
+		if (buffer[length-2] != ';') {
+			buffer[length-1]   = ';';
+		} else {
+			buffer[length-1] = '\0';
+		}
 		
 		ast_node_t *node = _winter_generateTree(state, buffer);
 		if (node != NULL) {

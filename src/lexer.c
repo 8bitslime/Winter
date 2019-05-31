@@ -200,12 +200,12 @@ int _winter_lexNext(lexState_t *lex) {
 	
 	if (*STRING != '\0') {
 		
-		if (!(lexIdent(lex) ||
-			lexNumber(lex)  ||
-			lexString(lex)  ||
-			lexChar(lex)    ||
-			lexKeyword(lex) ||
-			lexSymbol(lex))) {
+		if (!(lexKeyword(lex) ||
+			  lexIdent(lex)   ||
+			  lexNumber(lex)  ||
+			  lexString(lex)  ||
+			  lexChar(lex)    ||
+			  lexSymbol(lex))) {
 			//No parseable token, return unknown
 			lex->lookahead.type = TK_UNKNOWN;
 			lex->lookahead.size = 1;
