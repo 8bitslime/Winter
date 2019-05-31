@@ -256,13 +256,35 @@ static inline ast_node_t *parseLet(winterState_t *state, lexState_t *lex) {
 		while (lex->lookahead.type == TK_IDENT) {
 			_winter_lexNext(lex);
 			//TODO: check out of memory
-			ret = allocNode(state, NULL, ++size);
+			ret = allocNode(state, ret, ++size);
 			ret->type = AST_LET;
 			ret->children[size - 1] = createEprNode(state, &lex->current);
 			
 			if (lex->lookahead.type == TK_COMMA) {
 				_winter_lexNext(lex);
 				continue;
+			} else if (lex->lookahead.type == TK_ASSIGN) {
+				_winter_lexNext(lex);
+				ast_node_t *eq = createOprNode(state, AST_ASSIGN);
+				eq->children[0] = ret->children[size - 1];
+				ret->children[size - 1] = eq;
+				
+				ast_node_t *expr = parseExpression(state, lex);
+				if (expr == NULL) {
+					freeTree(state, ret);
+					ret = createErrorNode(state);
+					_winter_objectNewError(state, &ret->value, "expected an expression");
+				} else if (expr->type == AST_ERROR) {
+					freeTree(state, ret);
+					ret = expr;
+				} else {
+					eq->children[1] = expr;
+					printf("next token thing: %i\n", lex->lookahead.type);
+					if (lex->lookahead.type == TK_COMMA) {
+						_winter_lexNext(lex);
+						continue;
+					}
+				}
 			}
 			
 			return ret;
@@ -406,10 +428,38 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 		node = out;
 	} else if (node->type == AST_LET) {
 		for (size_t i = 0; i < node->numNodes; i++) {
-			_winter_tableInsert(state, state->globals, &(node->children[i]->value), NULL);
-			freeTree(state, node->children[i]);
+			ast_node_t *key_node = node->children[i];
+			object_t *key = NULL;
+			object_t *value = NULL;
+			if (key_node->type == AST_ASSIGN) {
+				key = &key_node->children[0]->value;
+				key_node->children[1] = walkTree(state, key_node->children[1]);
+				
+				if (key_node->children[1]->type == AST_ERROR) {
+					ast_node_t *temp = key_node->children[1];
+					key_node->children[1] = NULL;
+					freeTree(state, node);
+					return temp;
+				}
+				
+				value = &(key_node->children[1]->value);
+			} else {
+				key = &node->value;
+			}
+			object_t *object = _winter_tableGetObject(state->globals, key);
+			if (object != NULL) {
+				_winter_objectNewError(state, &node->value, "mutiple declarations of '%s'", key->string->data);
+				freeTree(state, node->children[i]);
+				node->type = AST_ERROR;
+				node->numNodes = 0;
+				return node;
+			} else {
+				_winter_tableInsert(state, state->globals, key, value);
+				freeTree(state, node->children[i]);
+			}
 		}
 		node->type  = AST_VALUE; 
+		node->numNodes = 0;
 		node->value = (object_t){TYPE_NULL};
 	} else if (node->type == AST_IDENT) {
 		object_t *obj = _winter_tableGetObject(state->globals, &node->value);
