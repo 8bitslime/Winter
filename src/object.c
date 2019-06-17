@@ -108,6 +108,10 @@ bool_t _winter_objectComp(object_t *a, object_t *b) {
 void _winter_tokenToObject(winterState_t *state, const token_t *token, object_t *dest) {
 	dest->type = TYPE_INT;
 	switch (typeof(token)) {
+		case TK_NULL:
+			dest->type = TYPE_NULL;
+			break;
+		
 		case TK_BINARY:
 			dest->integer = winter_strtoi(token->cursor.pointer + 2, 2);
 			break;

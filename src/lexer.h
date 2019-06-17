@@ -16,6 +16,7 @@ typedef enum token_type_t {
 	
 	//Keywords
 	TK_FOR, TK_DO, TK_WHILE, TK_IF, TK_ELSE, TK_LET,
+	TK_NULL,
 	
 	//Operators
 	TK_LSHIFTEQ, TK_RSHIFTEQ,

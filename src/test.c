@@ -39,7 +39,9 @@ static inline void printAST(ast_node_t *tree, int level) {
 		for (size_t i = 0; i < tree->numNodes; i++) {
 			printAST(tree->children[i], level + 1);
 		}
-	} else if (tree->type == AST_IDENT || tree->type == AST_VALUE) {
+	} else if (tree->type == AST_IDENT) {
+		printf("variable: \"%s\"\n", tree->value.string->data);
+	} else if (tree->type == AST_VALUE) {
 		printObject(&tree->value);
 		printf("\n");
 	} else if (tree->type == AST_LET) {

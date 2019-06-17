@@ -48,7 +48,7 @@ static inline void skipWhitespace(lexState_t *lex) {
 
 //TODO: better lookup data structure
 static const char *keywords[] = {
-	"for", "do", "while", "if", "else", "let"
+	"for", "do", "while", "if", "else", "let", "null"
 };
 
 static inline size_t lexKeyword(lexState_t *lex) {

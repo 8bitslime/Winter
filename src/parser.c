@@ -137,7 +137,7 @@ static inline ast_node_t *parseExpression(winterState_t *state, lexState_t *lex)
 	} expect = expression;
 	
 	//Will either return a proper expression or error
-	if (isExpression(lex->lookahead.type)) {
+	if (isExpression(lex->lookahead.type) || isUnarySymbol(lex->lookahead.type)) {
 		while (lex->lookahead.type != TK_EOF) {
 			token_t *token = &lex->lookahead;
 			
@@ -443,12 +443,16 @@ ast_node_t *walkTree(winterState_t *state, ast_node_t *node) {
 				}
 				
 				value = &(key_node->children[1]->value);
+				
+				if (value->type == TYPE_REFERENCE) {
+					value = value->pointer;
+				}
 			} else {
 				key = &node->value;
 			}
 			object_t *object = _winter_tableGetObject(state->globals, key);
 			if (object != NULL) {
-				_winter_objectNewError(state, &node->value, "mutiple declarations of '%s'", key->string->data);
+				_winter_objectNewError(state, &node->value, "multiple declarations of '%s'", key->string->data);
 				freeTree(state, node->children[i]);
 				node->type = AST_ERROR;
 				node->numNodes = 0;

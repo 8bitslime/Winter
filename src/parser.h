@@ -11,7 +11,8 @@
 #define isUnarySymbol(t) ((t) == TK_SUB || (t) == TK_NOT)
 #define isUnary(t)       ((t) == AST_NOT || (t) == AST_NEGATE)
 
-#define isExpression(t) ((token_type_t)(t) == TK_LPAREN || ((token_type_t)(t) >= TK_IDENT && (token_type_t)(t) <= TK_STRING))
+#define isExpression(t) ((token_type_t)(t) == TK_LPAREN || ((token_type_t)(t) >= TK_IDENT && \
+						(token_type_t)(t) <= TK_STRING) || (token_type_t)(t) == TK_NULL)
 
 //True if the node type has a memory managed value
 #define isManaged(t) ((t) >= AST_IDENT && (t) <= AST_ERROR)
